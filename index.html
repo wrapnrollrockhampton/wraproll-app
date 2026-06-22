@@ -412,7 +412,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.5</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.6</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2434,7 +2434,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='1.5';
+var APP_VER='1.6';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -2978,12 +2978,67 @@ function updatePayrollBadge(n){
 }
 
 var PAYROLL_REPORT_FROM='',PAYROLL_REPORT_TO='';
+var PAYROLL_WEEK_OFFSET=0;   // 0=this week, -1=last week
+var PAYROLL_CUSTOM=false;     // custom single-day mode
+
 function initPayrollDates(){
+  setPayrollWeek(0);
+}
+
+function payrollWeekMon(offset){
   var now=new Date(),dow=now.getDay();
-  var mon=new Date(now);mon.setDate(now.getDate()-(dow===0?6:dow-1));
+  var mon=new Date(now);
+  mon.setDate(now.getDate()-(dow===0?6:dow-1)+(offset*7));
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function setPayrollWeek(offset){
+  PAYROLL_WEEK_OFFSET=offset;
+  PAYROLL_CUSTOM=false;
+  var mon=payrollWeekMon(offset);
   var sun=new Date(mon);sun.setDate(mon.getDate()+6);
   PAYROLL_REPORT_FROM=localDateStr(mon);
   PAYROLL_REPORT_TO=localDateStr(sun);
+}
+
+function updatePayrollWeekLabel(){
+  var lbl=g('rpt-week-label');if(!lbl)return;
+  var fmt=function(ds){return safeNewDate(ds).toLocaleDateString('en-AU',{day:'numeric',month:'short'});};
+  if(PAYROLL_CUSTOM){
+    lbl.textContent=PAYROLL_REPORT_FROM===PAYROLL_REPORT_TO?fmt(PAYROLL_REPORT_FROM):fmt(PAYROLL_REPORT_FROM)+' – '+fmt(PAYROLL_REPORT_TO);
+  } else {
+    var mon=payrollWeekMon(PAYROLL_WEEK_OFFSET);
+    lbl.textContent=PAYROLL_WEEK_OFFSET===0?'This week':PAYROLL_WEEK_OFFSET===-1?'Last week':'Week of '+fmt(localDateStr(mon));
+  }
+  var sub=g('rpt-week-sub');
+  if(sub) sub.textContent=fmt(PAYROLL_REPORT_FROM)+' – '+fmt(PAYROLL_REPORT_TO)+' '+safeNewDate(PAYROLL_REPORT_TO).getFullYear();
+}
+
+function payrollWeekNav(dir){
+  setPayrollWeek(PAYROLL_WEEK_OFFSET+dir);
+  if(g('rpt-custom-wrap')) g('rpt-custom-wrap').style.display='none';
+  if(g('rpt-range-btn')) g('rpt-range-btn').textContent='\u{1F4C5} Custom range';
+  updatePayrollWeekLabel();
+  g('rpt-table-wrap').innerHTML=''; // clear old report
+}
+
+function togglePayrollCustom(){
+  PAYROLL_CUSTOM=!PAYROLL_CUSTOM;
+  var wrap=g('rpt-custom-wrap'),btn=g('rpt-range-btn');
+  if(wrap) wrap.style.display=PAYROLL_CUSTOM?'block':'none';
+  if(btn) btn.textContent=PAYROLL_CUSTOM?'\u2715 Use week nav':'\u{1F4C5} Custom range';
+  if(PAYROLL_CUSTOM){
+    // Default custom to today
+    var t=localToday();
+    PAYROLL_REPORT_FROM=t;PAYROLL_REPORT_TO=t;
+    if(g('rpt-cust-from')) g('rpt-cust-from').value=t;
+    if(g('rpt-cust-to')) g('rpt-cust-to').value=t;
+  } else {
+    setPayrollWeek(PAYROLL_WEEK_OFFSET);
+  }
+  updatePayrollWeekLabel();
+  g('rpt-table-wrap').innerHTML='';
 }
 
 function renderPayrollReport(){
@@ -2992,20 +3047,36 @@ function renderPayrollReport(){
   sec.innerHTML=
     '<div style="padding:12px 16px 14px">'+
       '<div style="font-size:14px;font-weight:700;margin-bottom:12px">📊 Payroll Report</div>'+
-      '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">From</div>'+
-          '<input type="date" id="rpt-from" value="'+PAYROLL_REPORT_FROM+'" onchange="PAYROLL_REPORT_FROM=this.value" style="display:block;box-sizing:border-box;width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:none;background:#f0f2f5;font-size:13px;font-family:inherit;color:var(--text);-webkit-appearance:none;appearance:none">'+
+      // Week navigation row
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+        '<button onclick="payrollWeekNav(-1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">‹</button>'+
+        '<div style="flex:1;text-align:center">'+
+          '<div id="rpt-week-label" style="font-size:14px;font-weight:700">This week</div>'+
+          '<div id="rpt-week-sub" style="font-size:11px;color:var(--text2)"></div>'+
         '</div>'+
-        '<div style="font-size:13px;color:var(--text2);padding-bottom:10px;flex-shrink:0">→</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">To</div>'+
-          '<input type="date" id="rpt-to" value="'+PAYROLL_REPORT_TO+'" onchange="PAYROLL_REPORT_TO=this.value" style="display:block;box-sizing:border-box;width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:none;background:#f0f2f5;font-size:13px;font-family:inherit;color:var(--text);-webkit-appearance:none;appearance:none">'+
+        '<button onclick="payrollWeekNav(1)" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center">›</button>'+
+      '</div>'+
+      // Custom range toggle
+      '<button id="rpt-range-btn" onclick="togglePayrollCustom()" style="width:100%;padding:8px;border-radius:9px;border:1px solid var(--border);background:#f9fafb;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:10px">\u{1F4C5} Custom range</button>'+
+      // Custom date inputs (hidden by default)
+      '<div id="rpt-custom-wrap" style="display:none;margin-bottom:10px">'+
+        '<div style="display:flex;gap:8px;align-items:flex-end">'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">From</div>'+
+            '<input type="date" id="rpt-cust-from" value="'+PAYROLL_REPORT_FROM+'" onchange="PAYROLL_REPORT_FROM=this.value;updatePayrollWeekLabel()" style="display:block;box-sizing:border-box;width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:none;background:#f0f2f5;font-size:13px;font-family:inherit;color:var(--text);-webkit-appearance:none;appearance:none">'+
+          '</div>'+
+          '<div style="font-size:13px;color:var(--text2);padding-bottom:10px;flex-shrink:0">→</div>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">To</div>'+
+            '<input type="date" id="rpt-cust-to" value="'+PAYROLL_REPORT_TO+'" onchange="PAYROLL_REPORT_TO=this.value;updatePayrollWeekLabel()" style="display:block;box-sizing:border-box;width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:none;background:#f0f2f5;font-size:13px;font-family:inherit;color:var(--text);-webkit-appearance:none;appearance:none">'+
+          '</div>'+
         '</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:5px">Tip: set From = To for a single day</div>'+
       '</div>'+
       '<button id="rpt-gen-btn" onclick="renderPayrollReportTable()" style="display:block;box-sizing:border-box;width:100%;padding:11px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Generate report</button>'+
     '</div>'+
     '<div id="rpt-table-wrap"></div>';
+  updatePayrollWeekLabel();
 }
 
 function renderPayrollReportTable(){
@@ -3285,9 +3356,7 @@ function renderPayrollCal(){
     var isSel=dstr===PAYROLL_SEL_DATE,isToday=dstr===localToday();
     html+='<button onclick="selectPayrollDay(\''+dstr+'\')" style="font-size:12px;text-align:center;padding:5px 2px;border-radius:8px;border:'+(isToday&&!isSel?'1.5px solid var(--blue)':'none')+';background:'+(isSel?'var(--blue)':st==='approved'?'var(--green-bg)':st==='pending'?'var(--amber-bg)':'transparent')+';color:'+(isSel?'#fff':st==='approved'?'var(--green)':st==='pending'?'var(--amber)':'var(--text)')+';font-weight:'+(st!=='empty'||isSel?'700':'400')+';cursor:pointer;font-family:inherit">'+d+'</button>';
   }
-  html+='</div><div style="display:flex;gap:10px;margin-top:6px;font-size:10px;color:var(--text2)">'+
-    '<span><span style="color:var(--green);font-weight:700">■</span> Approved</span>'+
-    '<span><span style="color:var(--amber);font-weight:700">■</span> Pending</span></div>';
+  html+='</div>';
   cal.innerHTML=html;
   renderPayrollDayDetail();
 }
@@ -3977,7 +4046,9 @@ function renderRevenuePage(){
   },0);
 
   // Net Sales Actual = card + cash actual (replaces Square total for P&L)
-  var netSalesActual=(s.card||0)+cashActualTotal;
+  // Net Sales Actual = Square net total, but swap Square cash for actual cash
+  // When cashActual === cashSquare, this equals Square net total exactly
+  var netSalesActual=(s.total||0)-(s.cash||0)+cashActualTotal;
 
   g('rev-total').textContent=fmtRevAUD(s.total);
   g('rev-txn').textContent=s.txn+' transactions'+(s.discount>0?' · Discounts: '+fmtRevAUD(s.discount):'');
@@ -4203,8 +4274,8 @@ function renderRevPnL(){
     var entered=REV_CASH_ACTUAL[d.date];
     return sum+(entered!==undefined&&entered!==''?Math.round(parseFloat(entered)*100):d.cash);
   },0);
-  var netActual=(s.card||0)+cashActualTotal;
   var squareTotal=s.total||0;
+  var netActual=squareTotal-(s.cash||0)+cashActualTotal;
 
   var payroll=getPayrollTotal();
   var expenses=getAllExpenses().reduce(function(t,e){return t+e.amount;},0);
@@ -4251,7 +4322,7 @@ function buildRevPrint(){
   },0);
 
   var revenue=s.total||0;
-  var netActual=(s.card||0)+cashActualTotal;
+  var netActual=revenue-(s.cash||0)+cashActualTotal;
   var profit=netActual-payroll-expenses;
   var margin=netActual>0?Math.round(Math.abs(profit)/netActual*100):0;
 
