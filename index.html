@@ -402,7 +402,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.2</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.3</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -547,12 +547,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
 
       <div class="sec-hd" style="margin-top:24px">
         <span class="sec-title">Pending Suggestions</span>
-        <button class="icon-btn" onclick="loadOrderSuggestions()">🔄</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button id="ord-select-btn" onclick="toggleOrdSelectMode()" style="display:none;padding:5px 11px;border-radius:9px;border:1px solid var(--border);background:#f9fafb;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">☑ Select</button>
+          <button id="ord-pending-toggle" onclick="toggleOrdList('pending')" class="icon-btn" title="Hide/show">👁️</button>
+          <button class="icon-btn" onclick="loadOrderSuggestions()">🔄</button>
+        </div>
+      </div>
+      <!-- Category filter pills -->
+      <div class="filter-pills" id="ord-cat-pills" style="margin-bottom:8px">
+        <button class="pill active" onclick="setOrdCatFilter('',this)">All</button>
+        <button class="pill" onclick="setOrdCatFilter('Dry Goods',this)">🌾 Dry</button>
+        <button class="pill" onclick="setOrdCatFilter('Frozen',this)">❄️ Frozen</button>
+        <button class="pill" onclick="setOrdCatFilter('Beverage',this)">🥤 Beverage</button>
+      </div>
+      <!-- Bulk action bar (shown in select mode) -->
+      <div id="ord-bulk-bar" style="display:none;align-items:center;gap:8px;padding:10px 14px;margin-bottom:8px;background:var(--blue-bg);border-radius:12px">
+        <span id="ord-bulk-count" style="font-size:13px;font-weight:700;color:var(--blue);flex:1">0 selected</span>
+        <button onclick="ordSelectAll()" style="padding:6px 10px;border-radius:8px;border:none;background:#fff;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">All</button>
+        <button onclick="bulkResolveOrders('Ordered')" style="padding:6px 12px;border-radius:8px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✓ Ordered</button>
+        <button onclick="bulkResolveOrders('Rejected')" style="padding:6px 12px;border-radius:8px;border:none;background:var(--red);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✕ Reject</button>
       </div>
       <div class="scard" id="ord-pending-list"></div>
 
       <div class="sec-hd" style="margin-top:16px">
         <span class="sec-title">Resolved History</span>
+        <button id="ord-resolved-toggle" onclick="toggleOrdList('resolved')" class="icon-btn" title="Hide/show">👁️</button>
       </div>
       <div class="scard" id="ord-resolved-list"></div>
     </div>
@@ -1769,29 +1788,124 @@ function updateOrdersBadge(){
     badge.style.display='none';
   }
 }
+// Order suggestion UI state
+var ORD_SELECT_MODE=false;
+var ORD_SELECTED={};
+var ORD_CAT_FILTER='';
+var ORD_HIDE_PENDING=false;
+var ORD_HIDE_RESOLVED=false;
+
+function toggleOrdSelectMode(){
+  ORD_SELECT_MODE=!ORD_SELECT_MODE;
+  ORD_SELECTED={};
+  var btn=g('ord-select-btn');
+  if(btn) btn.textContent=ORD_SELECT_MODE?'✕ Cancel':'☑ Select';
+  g('ord-bulk-bar').style.display=ORD_SELECT_MODE?'flex':'none';
+  renderOrderSuggestions();
+}
+
+function setOrdCatFilter(cat,el){
+  ORD_CAT_FILTER=cat;
+  document.querySelectorAll('#ord-cat-pills .pill').forEach(function(p){p.classList.remove('active');});
+  if(el) el.classList.add('active');
+  renderOrderSuggestions();
+}
+
+function toggleOrdList(which){
+  if(which==='pending'){
+    ORD_HIDE_PENDING=!ORD_HIDE_PENDING;
+    g('ord-pending-toggle').textContent=ORD_HIDE_PENDING?'🙈':'👁️';
+    g('ord-pending-list').style.display=ORD_HIDE_PENDING?'none':'';
+  } else {
+    ORD_HIDE_RESOLVED=!ORD_HIDE_RESOLVED;
+    g('ord-resolved-toggle').textContent=ORD_HIDE_RESOLVED?'🙈':'👁️';
+    g('ord-resolved-list').style.display=ORD_HIDE_RESOLVED?'none':'';
+  }
+}
+
+function toggleOrdItem(id){
+  if(ORD_SELECTED[id]) delete ORD_SELECTED[id];
+  else ORD_SELECTED[id]=true;
+  updateOrdBulkCount();
+  // Update just the checkbox visual
+  var cb=document.querySelector('[data-ordcb="'+id+'"]');
+  if(cb){
+    cb.style.background=ORD_SELECTED[id]?'var(--blue)':'#fff';
+    cb.textContent=ORD_SELECTED[id]?'✓':'';
+  }
+}
+
+function updateOrdBulkCount(){
+  var n=Object.keys(ORD_SELECTED).length;
+  if(g('ord-bulk-count')) g('ord-bulk-count').textContent=n+' selected';
+}
+
+function ordSelectAll(){
+  var pending=ORDERS.filter(function(o){return o.status==='Pending'&&(!ORD_CAT_FILTER||o.category===ORD_CAT_FILTER);});
+  var allSelected=pending.every(function(o){return ORD_SELECTED[o.id];});
+  ORD_SELECTED={};
+  if(!allSelected) pending.forEach(function(o){ORD_SELECTED[o.id]=true;});
+  updateOrdBulkCount();
+  renderOrderSuggestions();
+}
+
+function bulkResolveOrders(status){
+  var ids=Object.keys(ORD_SELECTED);
+  if(!ids.length){alert('No suggestions selected');return;}
+  if(!confirm('Mark '+ids.length+' suggestion'+(ids.length>1?'s':'')+' as "'+status+'"?'))return;
+  ov('Updating '+ids.length+'...');
+  var done=0;
+  ids.forEach(function(id){
+    api('updateOrderSuggestionStatus',{id:id,status:status,username:U.username}).then(function(){
+      done++;
+      if(done===ids.length){
+        ORD_SELECTED={};ORD_SELECT_MODE=false;
+        g('ord-select-btn').textContent='☑ Select';
+        g('ord-bulk-bar').style.display='none';
+        hov();
+        loadOrderSuggestions();
+      }
+    });
+  });
+}
+
 function renderOrderSuggestions(){
-  var pending=ORDERS.filter(function(o){return o.status==='Pending';});
-  var resolved=ORDERS.filter(function(o){return o.status!=='Pending';}).slice(0,20);
+  var pendingAll=ORDERS.filter(function(o){return o.status==='Pending';});
+  var resolvedAll=ORDERS.filter(function(o){return o.status!=='Pending';});
+  var pending=ORD_CAT_FILTER?pendingAll.filter(function(o){return o.category===ORD_CAT_FILTER;}):pendingAll;
+  var resolved=(ORD_CAT_FILTER?resolvedAll.filter(function(o){return o.category===ORD_CAT_FILTER;}):resolvedAll).slice(0,20);
   var isAdmin = U && U.role==='admin';
+
+  // Show/hide select button based on whether there are pending items
+  if(g('ord-select-btn')) g('ord-select-btn').style.display=(isAdmin&&pendingAll.length)?'':'none';
+
+  function supplierBadge(o){
+    return o.supplierSku
+      ? '<span style="font-family:monospace;font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);padding:1px 7px;border-radius:6px">ID: '+o.supplierSku+'</span>'
+      : '';
+  }
 
   g('ord-pending-list').innerHTML = pending.length ? pending.map(function(o){
     var ico = o.isNewProduct ? '✨' : (CAT_ICO[o.category]||'📦');
     var isAuto = o.source==='auto';
     var metaParts=[];
-    if(o.sku) metaParts.push('<span class="sku">'+o.sku+'</span>');
+    var supB=supplierBadge(o);
+    if(supB) metaParts.push(supB);
     metaParts.push('Qty: '+o.suggestedQty);
     if(!isAuto) metaParts.push('by '+o.requestedBy);
-    metaParts.push(o.time);
     if(o.isNewProduct) metaParts.push('<span class="new-product-tag">NEW</span>');
     var autoBadge = isAuto ?
       '<span style="display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:#FEF2F2;color:#DC2626;margin-right:6px">🔴 Low stock</span>' : '';
-    var actions = isAdmin ?
+    // Checkbox in select mode
+    var checkbox = (isAdmin&&ORD_SELECT_MODE) ?
+      '<div data-ordcb="'+o.id+'" onclick="toggleOrdItem(\''+o.id+'\')" style="width:24px;height:24px;border-radius:7px;border:2px solid var(--blue);background:'+(ORD_SELECTED[o.id]?'var(--blue)':'#fff')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">'+(ORD_SELECTED[o.id]?'✓':'')+'</div>' : '';
+    var actions = (isAdmin&&!ORD_SELECT_MODE) ?
       '<div class="ord-card-actions">'+
         '<button class="ord-btn-approve" onclick="resolveOrder(\''+o.id+'\',\'Ordered\')">✓ Ordered</button>'+
         '<button class="ord-btn-reject" onclick="resolveOrder(\''+o.id+'\',\'Rejected\')">✕</button>'+
-      '</div>' :
-      '<span class="ord-status-tag ord-status-pending">Pending</span>';
-    return '<div class="ord-card" style="'+(isAuto?'border-left:3px solid #DC2626;':'')+'">'+
+      '</div>' : (!isAdmin ? '<span class="ord-status-tag ord-status-pending">Pending</span>' : '');
+    return '<div class="ord-card" style="'+(isAuto?'border-left:3px solid #DC2626;':'')+(ORD_SELECT_MODE?'cursor:pointer':'')+'"'+(ORD_SELECT_MODE?' onclick="toggleOrdItem(\''+o.id+'\')"':'')+'>'+
+      checkbox+
       '<div class="ord-card-ico">'+ico+'</div>'+
       '<div class="ord-card-info">'+
         '<div class="ord-card-name">'+autoBadge+o.itemName+'</div>'+
@@ -1799,16 +1913,16 @@ function renderOrderSuggestions(){
         (o.note?'<div class="ord-card-meta" style="margin-top:3px;font-style:italic;color:var(--text3)">'+o.note+'</div>':'')+
       '</div>'+actions+
     '</div>';
-  }).join('') : '<div class="empty-state"><div class="emi">📋</div><p>No pending suggestions</p></div>';
+  }).join('') : '<div class="empty-state"><div class="emi">📋</div><p>No pending suggestions'+(ORD_CAT_FILTER?' in '+ORD_CAT_FILTER:'')+'</p></div>';
 
   g('ord-resolved-list').innerHTML = resolved.length ? resolved.map(function(o){
     var ico = o.isNewProduct ? '✨' : (CAT_ICO[o.category]||'📦');
     var statusCls = o.status==='Ordered' ? 'ord-status-ordered' : 'ord-status-rejected';
     var metaParts=[];
-    if(o.sku) metaParts.push('<span class="sku">'+o.sku+'</span>');
+    var supB=supplierBadge(o);
+    if(supB) metaParts.push(supB);
     metaParts.push('Qty: '+o.suggestedQty);
-    metaParts.push('by '+o.requestedBy);
-    if(o.resolvedBy) metaParts.push('resolved by '+o.resolvedBy);
+    if(o.resolvedBy) metaParts.push('by '+o.resolvedBy);
     var delBtn = isAdmin ? '<button class="ord-btn-delete" onclick="removeOrder(\''+o.id+'\')" title="Delete record">🗑</button>' : '';
     return '<div class="ord-card">'+
       '<div class="ord-card-ico">'+ico+'</div>'+
@@ -1817,6 +1931,8 @@ function renderOrderSuggestions(){
       '<div class="ord-card-actions"><span class="ord-status-tag '+statusCls+'">'+o.status+'</span>'+delBtn+'</div>'+
     '</div>';
   }).join('') : '<div class="empty-state" style="padding:20px"><p>No resolved suggestions yet</p></div>';
+
+  updateOrdBulkCount();
 }
 function resolveOrder(id,status){
   if(!confirm('Mark this suggestion as "'+status+'"?'))return;
