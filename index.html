@@ -402,7 +402,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.1</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.2</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2162,9 +2162,27 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 }
 
 // ════ SERVICE WORKER REGISTRATION ════
+var SW_REG=null;
 if('serviceWorker' in navigator){
   window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js').catch(function(){});
+    // updateViaCache:'none' forces browser to always re-fetch sw.js from network
+    // instead of using its own HTTP cache (key fix for slow mobile updates)
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then(function(reg){
+      SW_REG=reg;
+      // Check for update immediately
+      reg.update();
+      // Poll for updates every 30 seconds while app is open
+      setInterval(function(){ reg.update().catch(function(){}); }, 30000);
+    }).catch(function(){});
+  });
+  // Check for update whenever app regains focus (e.g. user reopens from home screen)
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState==='visible' && SW_REG){
+      SW_REG.update().catch(function(){});
+    }
+  });
+  window.addEventListener('focus', function(){
+    if(SW_REG) SW_REG.update().catch(function(){});
   });
 }
 
@@ -4028,20 +4046,31 @@ if(!tryRestoreSession()){
 
 // ── Auto-update: reload when Service Worker sends SW_UPDATED ──
 if('serviceWorker' in navigator){
+  var swReloading=false;
   navigator.serviceWorker.addEventListener('message', function(e){
-    if(e.data&&e.data.type==='SW_UPDATED'){
-      // Only reload if user isn't mid-action (no overlay visible)
-      var ov=document.getElementById('overlay');
-      if(!ov||ov.style.display==='none'||!ov.style.display){
-        console.log('New version available, reloading...');
+    if(e.data&&e.data.type==='SW_UPDATED' && !swReloading){
+      // Don't interrupt if a modal/bottom-sheet is open (user mid-action)
+      var modalOpen=document.querySelector('.mo.on');
+      var ovEl=document.getElementById('overlay');
+      var ovVisible=ovEl&&ovEl.style.display&&ovEl.style.display!=='none';
+      if(!modalOpen&&!ovVisible){
+        swReloading=true;
         window.location.reload();
       }
     }
   });
-  // Also check for waiting SW on startup and activate it
+  // Reload once the new SW takes control (controllerchange fires on activation)
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(swReloading) return;
+    var modalOpen=document.querySelector('.mo.on');
+    if(!modalOpen){ swReloading=true; window.location.reload(); }
+  });
+  // Activate waiting SW immediately when found
   navigator.serviceWorker.ready.then(function(reg){
+    if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
     reg.addEventListener('updatefound', function(){
       var newSW=reg.installing;
+      if(!newSW) return;
       newSW.addEventListener('statechange', function(){
         if(newSW.state==='installed' && navigator.serviceWorker.controller){
           newSW.postMessage({type:'SKIP_WAITING'});

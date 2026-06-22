@@ -1,16 +1,19 @@
-// Wrap&Roll Rockhampton — Service Worker v58
+// Wrap&Roll Rockhampton — Service Worker
 // Auto-update strategy: SW activates immediately, reloads clients on update
-var CACHE_NAME = 'wraproll-v1.1';
+// Mobile optimisation: index.html & sw.js always fetched network-first,
+// app polls registration.update() every 30s and on focus/visibility change.
+var CACHE_NAME = 'wraproll-v1.2';
 var APP_SHELL = ['./index.html','./manifest.json','./logo.png'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache){
       return cache.addAll(APP_SHELL);
+    }).then(function(){
+      // Activate this new SW immediately, don't wait for old tabs to close
+      return self.skipWaiting();
     })
   );
-  // Take over immediately — don't wait for old SW to die
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', function(e){
