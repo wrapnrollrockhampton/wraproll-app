@@ -412,7 +412,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.4</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.5</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -581,7 +581,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
 
       <div class="sec-hd" style="margin-top:16px">
         <span class="sec-title">Resolved History</span>
-        <button id="ord-resolved-toggle" onclick="toggleOrdList('resolved')" class="icon-btn" title="Hide/show">👁️</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button id="ord-export-btn" onclick="openOrderReport()" style="display:none;padding:5px 11px;border-radius:9px;border:none;background:var(--green);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📄 Order report</button>
+          <button id="ord-resolved-toggle" onclick="toggleOrdList('resolved')" class="icon-btn" title="Hide/show">👁️</button>
+        </div>
       </div>
       <div class="scard" id="ord-resolved-list"></div>
     </div>
@@ -820,9 +823,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <div class="fld"><label>Unit</label><input type="text" id="i-unit" placeholder="kg / box / bottle"></div>
         <div class="fld"><label>Alert Threshold</label><input type="number" id="i-thr" value="10" min="0" inputmode="numeric"></div>
       </div>
-      <div class="fld">
-        <label>Supplier ID <span style="font-size:11px;color:var(--text3);font-weight:400">(optional — for ordering)</span></label>
-        <input type="text" id="i-supplier-sku" placeholder="e.g. 955732" style="font-family:monospace">
+      <div class="fld-row">
+        <div class="fld">
+          <label>Supplier ID <span style="font-size:11px;color:var(--text3);font-weight:400">(for ordering)</span></label>
+          <input type="text" id="i-supplier-sku" placeholder="e.g. 955732" style="font-family:monospace">
+        </div>
+        <div class="fld">
+          <label>Supplier Name</label>
+          <input type="text" id="i-supplier-name" placeholder="e.g. Bidfood">
+        </div>
       </div>
       <div class="fld">
         <label id="i-qty-label">Opening Stock</label>
@@ -902,6 +911,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
       <div style="display:flex;gap:6px;padding:10px 14px;overflow-x:auto;border-bottom:1px solid var(--border)" id="ph-week-tabs"></div>
       <!-- Week detail -->
       <div id="ph-body" style="padding-bottom:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Report Modal (grouped by supplier) -->
+<div class="mo" id="m-order-report">
+  <div class="msheet" style="max-height:92vh">
+    <div class="mhandle"></div>
+    <div class="mhd">
+      <span class="mtitle">Order Report</span>
+      <button class="mclose" onclick="cm('m-order-report')">✕</button>
+    </div>
+    <div class="mbody" style="padding:0">
+      <div style="padding:10px 14px;display:flex;gap:8px;border-bottom:1px solid var(--border)">
+        <button onclick="exportOrderReportImg()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:#f9fafb;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📷 Save Image</button>
+        <button onclick="exportOrderReportPDF()" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDF</button>
+      </div>
+      <div id="order-report-body" style="padding-bottom:20px"></div>
     </div>
   </div>
 </div>
@@ -1942,8 +1969,125 @@ function renderOrderSuggestions(){
     '</div>';
   }).join('') : '<div class="empty-state" style="padding:20px"><p>No resolved suggestions yet</p></div>';
 
+  // Show "Order report" button if there are any Ordered items
+  var orderedCount=ORDERS.filter(function(o){return o.status==='Ordered';}).length;
+  if(g('ord-export-btn')) g('ord-export-btn').style.display=(isAdmin&&orderedCount>0)?'':'none';
+
   updateOrdBulkCount();
 }
+
+// ── Order Report: group Ordered items by supplier ──
+function openOrderReport(){
+  var ordered=ORDERS.filter(function(o){return o.status==='Ordered';});
+  if(!ordered.length){alert('No ordered items to report');return;}
+
+  // Group by supplier name (fallback to "Unknown Supplier")
+  var groups={};
+  ordered.forEach(function(o){
+    var sup=(o.supplierName||'').trim()||'(No supplier set)';
+    if(!groups[sup]) groups[sup]=[];
+    groups[sup].push(o);
+  });
+
+  var supNames=Object.keys(groups).sort(function(a,b){
+    // Put "(No supplier set)" last
+    if(a==='(No supplier set)') return 1;
+    if(b==='(No supplier set)') return -1;
+    return a.localeCompare(b);
+  });
+
+  var todayStr=new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  var html='<div id="order-report-print" style="font-family:system-ui,sans-serif;background:#fff;padding:20px">'+
+    '<div style="text-align:center;padding-bottom:12px;border-bottom:2px solid #111;margin-bottom:16px">'+
+      '<div style="font-size:18px;font-weight:800">Wrap&amp;Roll Rockhampton</div>'+
+      '<div style="font-size:13px;color:#666;margin-top:2px">Purchase Order Report</div>'+
+      '<div style="font-size:11px;color:#888;margin-top:2px">'+todayStr+'</div>'+
+    '</div>';
+
+  supNames.forEach(function(sup){
+    var items=groups[sup];
+    html+='<div style="margin-bottom:18px">'+
+      // Supplier header
+      '<div style="background:#f0f7ff;border-left:4px solid #185FA5;padding:8px 12px;margin-bottom:8px;border-radius:0 8px 8px 0">'+
+        '<div style="font-size:14px;font-weight:800;color:#185FA5">🏢 '+sup+'</div>'+
+        '<div style="font-size:11px;color:#666">'+items.length+' item'+(items.length>1?'s':'')+' to order</div>'+
+      '</div>'+
+      // Items table
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="border-bottom:1.5px solid #ddd">'+
+          '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Product</th>'+
+          '<th style="text-align:left;padding:6px 8px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Supplier ID</th>'+
+          '<th style="text-align:right;padding:6px 8px;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em">Qty</th>'+
+        '</tr></thead><tbody>';
+    items.forEach(function(o){
+      html+='<tr style="border-bottom:1px solid #f0f0f0">'+
+        '<td style="padding:7px 8px;font-weight:600;color:#111">'+o.itemName+'</td>'+
+        '<td style="padding:7px 8px;font-family:monospace;color:#185FA5;font-weight:700">'+(o.supplierSku||'—')+'</td>'+
+        '<td style="padding:7px 8px;text-align:right;font-weight:700">'+o.suggestedQty+'</td>'+
+      '</tr>';
+    });
+    html+='</tbody></table></div>';
+  });
+
+  html+='<div style="margin-top:16px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#888;text-align:center">'+
+    'Total: '+ordered.length+' items across '+supNames.length+' supplier'+(supNames.length>1?'s':'')+
+  '</div></div>';
+
+  g('order-report-body').innerHTML=html;
+  om('m-order-report');
+}
+
+function exportOrderReportImg(){
+  var el=document.getElementById('order-report-print');if(!el)return;
+  loadHtml2Canvas(function(){
+    ov('Generating image...');
+    html2canvas(el,{scale:2,backgroundColor:'#fff',useCORS:true}).then(function(canvas){
+      hov();
+      canvas.toBlob(function(blob){
+        var file=new File([blob],'order-report.png',{type:'image/png'});
+        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+          navigator.share({files:[file],title:'Order Report'}).catch(function(){});
+        } else {
+          var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='order-report.png';a.click();
+        }
+      },'image/png');
+    }).catch(function(){hov();alert('Export failed');});
+  });
+}
+
+function exportOrderReportPDF(){
+  var el=document.getElementById('order-report-print');if(!el)return;
+  loadHtml2Canvas(function(){
+    ov('Generating PDF...');
+    html2canvas(el,{scale:2,backgroundColor:'#fff'}).then(function(canvas){
+      var s2=document.createElement('script');
+      s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s2.onload=function(){
+        var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        var w=pdf.internal.pageSize.getWidth();
+        var ph=pdf.internal.pageSize.getHeight();
+        var imgW=w-16;
+        var imgH=(canvas.height/canvas.width)*imgW;
+        if(imgH<=ph-16){
+          pdf.addImage(canvas.toDataURL('image/png'),'PNG',8,8,imgW,imgH);
+        } else {
+          // Multi-page
+          var pageH=ph-16, pos=0, remaining=imgH;
+          while(remaining>0){
+            pdf.addImage(canvas.toDataURL('image/png'),'PNG',8,8-pos,imgW,imgH);
+            remaining-=pageH;
+            if(remaining>0){pdf.addPage();pos+=pageH;}
+          }
+        }
+        hov();
+        pdf.save('order-report.pdf');
+      };
+      document.head.appendChild(s2);
+    }).catch(function(){hov();alert('Export failed');});
+  });
+}
+
 function resolveOrder(id,status){
   if(!confirm('Mark this suggestion as "'+status+'"?'))return;
   api('updateOrderSuggestionStatus',{id:id,status:status,username:U.username}).then(function(r){
@@ -2110,7 +2254,7 @@ function openAddItem(){
   g('m-item-title').textContent='Add Item';
   g('i-sku').value='';g('i-name').value='';g('i-unit').value='';
   g('i-qty').value='0';g('i-thr').value='10';g('i-id').value='';
-  g('i-supplier-sku').value='';
+  g('i-supplier-sku').value='';g('i-supplier-name').value='';
   g('i-qty-label').textContent='Opening Stock';
   g('i-qty-hint').style.display='none';
   g('i-msg').innerHTML='';clearSKUPreview();resetSKUPreviewStyle();om('m-item');
@@ -2120,7 +2264,7 @@ function openEditItem(id){
   g('m-item-title').textContent='Edit Item';
   g('i-sku').value=it.sku;g('i-name').value=it.name;g('i-cat').value=it.cat;
   g('i-unit').value=it.unit;g('i-qty').value=it.qty;g('i-thr').value=it.threshold;g('i-id').value=it.id;
-  g('i-supplier-sku').value=it.supplierSku||'';
+  g('i-supplier-sku').value=it.supplierSku||'';g('i-supplier-name').value=it.supplierName||'';
   g('i-qty-label').textContent='Current Stock';
   g('i-qty-hint').style.display='block';
   g('i-msg').innerHTML='';clearSKUPreview();resetSKUPreviewStyle();om('m-item');
@@ -2133,7 +2277,7 @@ function duplicateItem(id){
   var newSKU=cc+'-'+nc+'-'+(Math.floor(Math.random()*9000)+1000);
   g('i-sku').value=newSKU;g('i-name').value='Copy of '+it.name;g('i-cat').value=it.cat;
   g('i-unit').value=it.unit;g('i-qty').value='0';g('i-thr').value=it.threshold;g('i-id').value='';
-  g('i-supplier-sku').value=it.supplierSku||'';
+  g('i-supplier-sku').value=it.supplierSku||'';g('i-supplier-name').value=it.supplierName||'';
   g('i-qty-label').textContent='Opening Stock';
   g('i-qty-hint').style.display='none';
   resetSKUPreviewStyle();
@@ -2183,10 +2327,11 @@ function saveItem(){
   var cat=g('i-cat').value,unit=g('i-unit').value.trim();
   var qty=g('i-qty').value,thr=g('i-thr').value,id=g('i-id').value;
   var supplierSku=g('i-supplier-sku').value.trim();
+  var supplierName=g('i-supplier-name').value.trim();
   if(!name||!unit){showMsg('i-msg','err','Please enter item name and unit');return;}
   ov('Saving...');
-  var call = id ? api('updateItem',{itemId:id,sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku})
-                : api('addItem',{sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku});
+  var call = id ? api('updateItem',{itemId:id,sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName})
+                : api('addItem',{sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName});
   call.then(function(r){
     hov();
     if(!r.ok){showMsg('i-msg','err','❌ '+r.msg);return;}
@@ -2289,7 +2434,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='1.4';
+var APP_VER='1.5';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
