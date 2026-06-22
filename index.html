@@ -417,7 +417,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.8</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.9</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2457,7 +2457,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='1.8';
+var APP_VER='1.9';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -4045,6 +4045,29 @@ function saveOneOffExpenses(){
   }catch(e){}
 }
 
+// Cash (Actual) values persist per period, keyed by date inside the period
+function getCashActualKey(){
+  var d=getRevDates();
+  return 'wr_cashactual_'+d.from+'_'+d.to;
+}
+function loadCashActual(){
+  try{
+    var key=getCashActualKey();
+    var saved=localStorage.getItem(key);
+    REV_CASH_ACTUAL=saved?JSON.parse(saved):{};
+  }catch(e){ REV_CASH_ACTUAL={}; }
+}
+function saveCashActual(){
+  try{
+    var key=getCashActualKey();
+    if(Object.keys(REV_CASH_ACTUAL).length>0){
+      localStorage.setItem(key,JSON.stringify(REV_CASH_ACTUAL));
+    } else {
+      localStorage.removeItem(key);
+    }
+  }catch(e){}
+}
+
 loadFixedExpenses();
 
 function revWeekMon(offset){
@@ -4106,8 +4129,9 @@ function getRevDates(){
 function loadRevenue(){
   updateRevWeekLabel();
   var dates=getRevDates();
-  // Load one-off expenses saved for this period
+  // Load one-off expenses + cash actual saved for this period
   loadOneOffExpenses();
+  loadCashActual();
   ov('Loading Square data...');
   api('getSquareSales',{dateFrom:dates.from,dateTo:dates.to}).then(function(r){
     hov();
@@ -4219,6 +4243,7 @@ function toggleRevCashEdit(panelId,date){
 function saveRevCash(date,inputId,panelId){
   var val=g(inputId)?g(inputId).value:'';
   if(val!=='') REV_CASH_ACTUAL[date]=val; else delete REV_CASH_ACTUAL[date];
+  saveCashActual(); // persist per-period so it survives switching weeks
   if(g(panelId)) g(panelId).style.display='none';
   renderRevenuePage();
 }
