@@ -412,7 +412,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.6</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v1.7</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2434,7 +2434,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='1.6';
+var APP_VER='1.7';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -3809,6 +3809,36 @@ function toggleSidebar(){
   if(SIDEBAR_OPEN){ sb.classList.remove('closed'); tog.classList.remove('closed'); tog.textContent='‹'; }
   else { sb.classList.add('closed'); tog.classList.add('closed'); tog.textContent='›'; }
 }
+function setSidebar(open){
+  if(open===SIDEBAR_OPEN) return;
+  toggleSidebar();
+}
+
+// ── Swipe gesture to open/close sidebar ──
+// Swipe right from near the left edge → open; swipe left anywhere → close.
+(function(){
+  var startX=0, startY=0, tracking=false;
+  var EDGE=40;      // px from left edge to start an "open" swipe
+  var THRESHOLD=55; // min horizontal px to trigger
+  document.addEventListener('touchstart', function(e){
+    // Ignore if a modal/bottom-sheet is open (don't fight their gestures)
+    if(document.querySelector('.mo.on')) { tracking=false; return; }
+    var t=e.touches[0];
+    startX=t.clientX; startY=t.clientY;
+    // Only track if: opening swipe starts near edge, OR sidebar is open (to allow close)
+    tracking = (startX<=EDGE && !SIDEBAR_OPEN) || SIDEBAR_OPEN;
+  }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if(!tracking) return;
+    tracking=false;
+    var t=e.changedTouches[0];
+    var dx=t.clientX-startX, dy=t.clientY-startY;
+    // Must be mostly horizontal
+    if(Math.abs(dx)<THRESHOLD || Math.abs(dy)>Math.abs(dx)) return;
+    if(dx>0 && startX<=EDGE && !SIDEBAR_OPEN) setSidebar(true);   // swipe right from edge → open
+    else if(dx<0 && SIDEBAR_OPEN) setSidebar(false);              // swipe left → close
+  }, {passive:true});
+})();
 
 // ════ AVATAR HELPER ════
 var RL2={admin:'Admin',staff:'Staff',viewer:'Viewer'};
