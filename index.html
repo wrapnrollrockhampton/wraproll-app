@@ -64,6 +64,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
 .rc-detbanner{display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:12px;background:#f5f3ff;margin:14px 0 4px;font-size:13px;color:#7c3aed;font-weight:600}
 .rc-detbanner b{font-weight:800}
 .adm-arrow{display:inline-block;font-size:11px;color:var(--text3);transition:transform .15s;margin-right:4px}
+.cat-group-h{display:flex;align-items:center;gap:8px;margin:6px 0 6px;padding:9px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:11px;cursor:pointer}
+.cat-group-h .ar{font-size:11px;color:var(--text3);transition:transform .15s}
+.cat-group-h.col .ar{transform:rotate(-90deg)}
+.cat-group-h .t{font-size:13px;font-weight:800;flex:1}
+.cat-group-h .ct{font-size:11px;font-weight:700;color:var(--text2);background:#eceff3;border-radius:20px;padding:1px 9px}
+.cat-group-b{margin-bottom:8px}
+.cat-group-b.col{display:none}
 .pk-cath{display:flex;align-items:center;gap:8px;margin:16px 0 8px;cursor:pointer}
 .pk-cath .ar{font-size:11px;color:var(--text3);transition:transform .15s}
 .pk-cath.col .ar{transform:rotate(-90deg)}
@@ -484,7 +491,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.4</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.5</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -516,9 +523,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
           <button class="icon-btn" onclick="loadAll()" title="Refresh">🔄</button>
         </div>
         <div class="metric-row metric-row-5" id="d-metrics"></div>
-
-        <!-- Picking pickup box: what to gather for tomorrow -->
-        <div id="dash-picking-box" style="margin-top:14px"></div>
 
         <div class="sec-hd" style="margin-top:20px">
           <span class="sec-title">Activity Summary</span>
@@ -1337,22 +1341,19 @@ function renderDash(){
     '<button class="metric-card green" onclick="showDetailModal(\'ok\')"><div class="mc-icon">✅</div><div class="mc-val">'+ok.length+'</div><div class="mc-lbl">In Stock</div></button>'+
     '<button class="metric-card amber" onclick="showDetailModal(\'low\')"><div class="mc-icon">⚠️</div><div class="mc-val">'+low.length+'</div><div class="mc-lbl">Low Stock</div></button>'+
     '<button class="metric-card red" onclick="showDetailModal(\'out\')"><div class="mc-icon">🚫</div><div class="mc-val">'+out.length+'</div><div class="mc-lbl">Out of Stock</div></button>'+
-    '<button class="metric-card purple" onclick="showDetailModal(\'orders\')"><div class="mc-icon">📋</div><div class="mc-val">'+pendingOrders.length+'</div><div class="mc-lbl">Order Suggestions</div></button>';
+    '<button class="metric-card purple" onclick="showDetailModal(\'orders\')"><div class="mc-icon">📋</div><div class="mc-val">'+pendingOrders.length+'</div><div class="mc-lbl">Order Suggestions</div></button>'+
+    ((U&&U.role==='admin')?'<button class="metric-card blue" onclick="pkPickupOpen()" id="mc-picking"><div class="mc-icon">🛒</div><div class="mc-val" id="mc-picking-val">—</div><div class="mc-lbl">Picking pickup</div></button>':'');
 
   renderDashPickingBox();
 }
 
-// Aggregate approved pick requests into a "to pick up" list for the admin dashboard
+// Load approved pick requests, consolidate, and update the Picking metric card
 var PK_PICKUP=[];
 function renderDashPickingBox(){
-  var box=g('dash-picking-box'); if(!box) return;
-  if(!(U&&U.role==='admin')){ box.innerHTML=''; box.style.display='none'; return; }
-  box.style.display='';
-  box.innerHTML='<div class="scard" style="padding:14px;display:flex;align-items:center;gap:12px;opacity:.6"><div style="font-size:24px">🛒</div><div style="flex:1"><div style="font-size:13px;font-weight:700">Picking pickup list</div><div style="font-size:11px;color:var(--text2)">Loading…</div></div></div>';
+  if(!(U&&U.role==='admin')) return;
   api('getPickRequests').then(function(r){
     var reqs=(r.ok&&r.data)?r.data:[];
     PK_REQS=reqs;
-    // consolidate APPROVED requests by item name+unit
     var agg={};
     reqs.filter(function(x){return x.status==='Approved';}).forEach(function(req){
       (req.items||[]).forEach(function(it){
@@ -1362,14 +1363,7 @@ function renderDashPickingBox(){
       });
     });
     PK_PICKUP=Object.keys(agg).map(function(k){return agg[k];});
-    var n=PK_PICKUP.length;
-    var pendingN=reqs.filter(function(x){return x.status==='Pending';}).length;
-    box.innerHTML='<button onclick="pkPickupOpen()" style="width:100%;text-align:left;border:1px solid var(--border);background:#fff;border-radius:14px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit">'+
-      '<div style="font-size:24px">🛒</div>'+
-      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700">Picking pickup list</div>'+
-      '<div style="font-size:11px;color:var(--text2)">'+(n?n+' item'+(n===1?'':'s')+' approved to gather':'Nothing approved yet')+(pendingN?' · '+pendingN+' pending':'')+'</div></div>'+
-      '<div style="font-size:20px;font-weight:800;color:var(--blue)">'+n+'</div>'+
-      '<div style="color:var(--text3);font-size:18px">›</div></button>';
+    var vEl=g('mc-picking-val'); if(vEl) vEl.textContent=PK_PICKUP.length;
   });
 }
 function pkPickupOpen(){
@@ -1580,6 +1574,33 @@ function setInvFilter(type,val,el){
   else{el.classList.toggle('active');}
   renderInv();
 }
+var INV_GROUP_COL={};
+function invRowHtml(i,canEditStock){
+  var st=status(i.qty,i.threshold);
+  var needsSetup = !i.unit || !i.sku;
+  var isAdmin = U && U.role==='admin';
+  var rowClick = (needsSetup && isAdmin) ? ' onclick="openEditItem(\''+i.id+'\')" style="cursor:pointer"' : '';
+  var rightSide;
+  if(needsSetup){
+    rightSide = '<span class="badge" style="background:var(--amber-bg);color:var(--amber)">'+(isAdmin?'Tap to finish setup':'Needs setup')+'</span>';
+  } else if(canEditStock){
+    var qtyColor = st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)';
+    rightSide =
+      '<div class="qty-stepper">'+
+        '<button class="qty-step-btn" onclick="event.stopPropagation();stepInvQty(\''+i.id+'\',-1)">−</button>'+
+        '<span class="item-qty qty-tap" style="color:'+qtyColor+'" onclick="event.stopPropagation();openInlineQtyEdit(\''+i.id+'\')">'+i.qty+'</span>'+
+        '<button class="qty-step-btn" onclick="event.stopPropagation();stepInvQty(\''+i.id+'\',1)">+</button>'+
+      '</div>'+
+      '<div class="item-unit">'+i.unit+'</div>';
+  } else {
+    rightSide = '<div class="item-qty" style="color:'+(st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)')+'">'+i.qty+'</div><div class="item-unit">'+i.unit+'</div>';
+  }
+  return '<div class="item-row"'+rowClick+' id="inv-row-'+i.id+'">'+
+    '<div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( catIcon(i.cat))+'</div>'+
+    '<div class="item-info"><div class="item-name">'+i.name+'</div><div class="item-meta"><span class="status-dot dot-'+st+'"></span>'+skuTag(i.sku)+(i.sku?' · ':'')+'<span style="color:var(--text3)">thresh: '+i.threshold+'</span>'+((i.cost&&i.cost>0)?'<span style="color:var(--blue);font-weight:600">· $'+Number(i.cost).toFixed(2)+'/'+i.unit+'</span>':'')+'</div></div>'+
+    '<div class="item-right">'+rightSide+'</div>'+
+  '</div>';
+}
 function renderInv(){
   var s=(g('inv-s').value||'').toLowerCase();
   var f=INV.filter(function(i){
@@ -1590,36 +1611,32 @@ function renderInv(){
   }).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
   if(U&&U.role==='admin'){g('inv-add-btn').innerHTML='<button class="action-btn btn-ghost" onclick="openAddItem()" style="margin-top:4px">+ Add New Item</button>';}
   var canEditStock = U && (U.role==='admin' || U.role==='staff');
-  g('inv-list').innerHTML=f.length?f.map(function(i){
-    var st=status(i.qty,i.threshold);
-    var needsSetup = !i.unit || !i.sku;
-    var isAdmin = U && U.role==='admin';
-    var rowClick = (needsSetup && isAdmin) ? ' onclick="openEditItem(\''+i.id+'\')" style="cursor:pointer"' : '';
-    var rightSide;
-    if(needsSetup){
-      rightSide = '<span class="badge" style="background:var(--amber-bg);color:var(--amber)">'+(isAdmin?'Tap to finish setup':'Needs setup')+'</span>';
-    } else if(canEditStock){
-      var qtyColor = st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)';
-      rightSide =
-        '<div class="qty-stepper">'+
-          '<button class="qty-step-btn" onclick="event.stopPropagation();stepInvQty(\''+i.id+'\',-1)">−</button>'+
-          '<span class="item-qty qty-tap" style="color:'+qtyColor+'" onclick="event.stopPropagation();openInlineQtyEdit(\''+i.id+'\')">'+i.qty+'</span>'+
-          '<button class="qty-step-btn" onclick="event.stopPropagation();stepInvQty(\''+i.id+'\',1)">+</button>'+
-        '</div>'+
-        '<div class="item-unit">'+i.unit+'</div>';
-    } else {
-      rightSide = '<div class="item-qty" style="color:'+(st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)')+'">'+i.qty+'</div><div class="item-unit">'+i.unit+'</div>';
-    }
-    return '<div class="item-row"'+rowClick+' id="inv-row-'+i.id+'">'+
-      '<div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( catIcon(i.cat))+'</div>'+
-      '<div class="item-info"><div class="item-name">'+i.name+'</div><div class="item-meta"><span class="status-dot dot-'+st+'"></span>'+skuTag(i.sku)+(i.sku?' · ':'')+'<span style="color:var(--text3)">thresh: '+i.threshold+'</span>'+((i.cost&&i.cost>0)?'<span style="color:var(--blue);font-weight:600">· $'+Number(i.cost).toFixed(2)+'/'+i.unit+'</span>':'')+'</div></div>'+
-      '<div class="item-right">'+rightSide+'</div>'+
-    '</div>';
-  }).join(''):'<div class="empty-state"><div class="emi">🔍</div><p>No items found</p></div>';
 
-  // When there is exactly one result (e.g. after a barcode scan or a very
-  // specific search), highlight it and scroll it into view so staff can
-  // see and act on it immediately without having to hunt through the list.
+  if(!f.length){
+    g('inv-list').innerHTML='<div class="empty-state"><div class="emi">🔍</div><p>No items found</p></div>';
+    return;
+  }
+  // While searching, show a flat list (grouping would get in the way).
+  if(s){
+    g('inv-list').innerHTML=f.map(function(i){return invRowHtml(i,canEditStock);}).join('');
+  } else {
+    // Group by category, collapsible (collapsed by default)
+    var byCat={};
+    f.forEach(function(i){ var c=i.cat||'Other'; (byCat[c]=byCat[c]||[]).push(i); });
+    var cats=Object.keys(byCat).sort(function(a,b){return a.localeCompare(b);});
+    g('inv-list').innerHTML=cats.map(function(cat){
+      var items=byCat[cat];
+      var col=(INV_GROUP_COL[cat]===undefined)?true:INV_GROUP_COL[cat];
+      if(invStFilter) col=false; // when filtering Low/Out, show matches expanded
+      return '<div class="cat-group-h'+(col?' col':'')+'" data-invcat="'+String(cat).replace(/"/g,'&quot;')+'"><span class="ar">▼</span><span class="t">'+catIcon(cat)+' '+cat+'</span><span class="ct">'+items.length+'</span></div>'+
+        '<div class="cat-group-b'+(col?' col':'')+'">'+items.map(function(i){return invRowHtml(i,canEditStock);}).join('')+'</div>';
+    }).join('');
+    g('inv-list').querySelectorAll('.cat-group-h[data-invcat]').forEach(function(h){
+      h.addEventListener('click',function(){var c=h.getAttribute('data-invcat');var prev=(INV_GROUP_COL[c]===undefined)?true:INV_GROUP_COL[c];INV_GROUP_COL[c]=!prev;renderInv();});
+    });
+  }
+
+  // When there is exactly one result (search), highlight + scroll to it.
   if(f.length===1 && (g('inv-s').value||'').trim()){
     var row=g('inv-row-'+f[0].id);
     if(row){
@@ -2089,6 +2106,7 @@ function updateOrdersBadge(){
 var ORD_SELECT_MODE=false;
 var ORD_SELECTED={};
 var ORD_CAT_FILTER='';
+var ORD_GROUP_COL={};
 var ORD_HIDE_PENDING=false;
 var ORD_HIDE_RESOLVED=false;
 
@@ -2182,7 +2200,7 @@ function renderOrderSuggestions(){
       : '';
   }
 
-  g('ord-pending-list').innerHTML = pending.length ? pending.map(function(o){
+  function ordPendingCard(o){
     var ico = o.isNewProduct ? '✨' : catIcon(o.category);
     var isAuto = o.source==='auto';
     var metaParts=[];
@@ -2191,10 +2209,8 @@ function renderOrderSuggestions(){
     metaParts.push('Qty: '+o.suggestedQty);
     if(!isAuto) metaParts.push('by '+o.requestedBy);
     if(o.isNewProduct) metaParts.push('<span class="new-product-tag">NEW</span>');
-    // Auto low-stock items: small red dot before the name (red left border on card already signals it)
     var autoBadge = isAuto ?
       '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#DC2626;margin-right:6px;flex-shrink:0"></span>' : '';
-    // Checkbox in select mode
     var checkbox = (isAdmin&&ORD_SELECT_MODE) ?
       '<div data-ordcb="'+o.id+'" onclick="toggleOrdItem(\''+o.id+'\')" style="width:24px;height:24px;border-radius:7px;border:2px solid var(--blue);background:'+(ORD_SELECTED[o.id]?'var(--blue)':'#fff')+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0">'+(ORD_SELECTED[o.id]?'✓':'')+'</div>' : '';
     var actions = (isAdmin&&!ORD_SELECT_MODE) ?
@@ -2211,7 +2227,29 @@ function renderOrderSuggestions(){
         (o.note?'<div class="ord-card-meta" style="margin-top:3px;font-style:italic;color:var(--text3)">'+o.note+'</div>':'')+
       '</div>'+actions+
     '</div>';
-  }).join('') : '<div class="empty-state"><div class="emi">📋</div><p>No pending suggestions'+(ORD_CAT_FILTER?' in '+ORD_CAT_FILTER:'')+'</p></div>';
+  }
+
+  if(!pending.length){
+    g('ord-pending-list').innerHTML='<div class="empty-state"><div class="emi">📋</div><p>No pending suggestions'+(ORD_CAT_FILTER?' in '+ORD_CAT_FILTER:'')+'</p></div>';
+  } else if(ORD_SELECT_MODE){
+    // In select mode, show a flat list so bulk-selecting is easy
+    g('ord-pending-list').innerHTML=pending.map(ordPendingCard).join('');
+  } else {
+    // Group by category, collapsible (collapsed by default)
+    var byCat={};
+    pending.forEach(function(o){ var c=o.category||'Other'; (byCat[c]=byCat[c]||[]).push(o); });
+    var cats=Object.keys(byCat).sort(function(a,b){return a.localeCompare(b);});
+    g('ord-pending-list').innerHTML=cats.map(function(cat){
+      var items=byCat[cat];
+      var col=(ORD_GROUP_COL[cat]===undefined)?true:ORD_GROUP_COL[cat];
+      if(ORD_CAT_FILTER) col=false;
+      return '<div class="cat-group-h'+(col?' col':'')+'" data-ordcat="'+String(cat).replace(/"/g,'&quot;')+'"><span class="ar">▼</span><span class="t">'+catIcon(cat)+' '+cat+'</span><span class="ct">'+items.length+'</span></div>'+
+        '<div class="cat-group-b'+(col?' col':'')+'">'+items.map(ordPendingCard).join('')+'</div>';
+    }).join('');
+    g('ord-pending-list').querySelectorAll('.cat-group-h[data-ordcat]').forEach(function(h){
+      h.addEventListener('click',function(){var c=h.getAttribute('data-ordcat');var prev=(ORD_GROUP_COL[c]===undefined)?true:ORD_GROUP_COL[c];ORD_GROUP_COL[c]=!prev;renderOrderSuggestions();});
+    });
+  }
 
   g('ord-resolved-list').innerHTML = resolved.length ? resolved.map(function(o){
     var ico = o.isNewProduct ? '✨' : catIcon(o.category);
@@ -2859,7 +2897,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='3.4';
+var APP_VER='3.5';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
