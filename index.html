@@ -460,7 +460,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v2.8</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v2.9</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2541,7 +2541,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='2.8';
+var APP_VER='2.9';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -4680,7 +4680,7 @@ var RC_RULES={
 };
 
 function initReceivePage(){
-  RC_SUP=null; RC_KNOWN=[]; RC_NEW=[];
+  RC_SUP=null; RC_KNOWN=[]; RC_NEW=[]; RC_REF=null; RC_INVDATE=null; RC_DUP=false;
   g('rc-detected').innerHTML='';
   g('rc-results').innerHTML='';
   g('rc-raw').classList.remove('on'); g('rc-raw').style.display='none';
@@ -4750,6 +4750,8 @@ function rcReconstruct(items){
   return lines.join('\n');
 }
 
+var RC_REF=null, RC_INVDATE=null, RC_DUP=false;
+
 function rcHandleText(text){
   g('rc-raw').textContent=text; g('rc-raw-toggle').style.display='inline';
   RC_SUP=rcDetectSupplier(text);
@@ -4759,12 +4761,69 @@ function rcHandleText(text){
     g('rc-results').innerHTML=''; g('rc-savebar').style.display='none';
     return;
   }
-  g('rc-detected').innerHTML='<div class="rc-detbanner">📄 Supplier detected: <b>'+RC_SUP+'</b></div>';
+  RC_REF=rcInvoiceRef(text, RC_SUP);
+  RC_INVDATE=rcInvoiceDate(text);
+  // Build detected banner with supplier + invoice ref/date
+  var refTxt = RC_REF ? (' · '+(RC_SUP==='CCEP'?'Order':'Invoice')+' #'+RC_REF) : '';
+  var dateTxt = RC_INVDATE ? (' · '+RC_INVDATE) : '';
+  g('rc-detected').innerHTML='<div class="rc-detbanner">📄 <b>'+RC_SUP+'</b>'+refTxt+dateTxt+'</div>';
+
+  // Duplicate check — was this invoice already imported?
+  RC_DUP=false;
+  if(RC_REF){
+    var rec=rcImportedGet(RC_SUP, RC_REF);
+    if(rec){
+      RC_DUP=true;
+      g('rc-detected').innerHTML+='<div class="rc-detbanner" style="background:var(--red-bg);color:var(--red)">⛔ Already imported on '+(rec.date||'a previous date')+' ('+(rec.count||0)+' items). Re-importing would double-count stock.</div>';
+    }
+  }
+
   rcClassify(text);
   g('rc-savebar').style.display='block';
   var tot=RC_KNOWN.length+RC_NEW.length;
-  if(tot>0) rcStatus('Found '+tot+' line'+(tot===1?'':'s')+' — '+RC_KNOWN.length+' in inventory, '+RC_NEW.length+' new.','ok');
-  else rcStatus('Supplier read, but no line items matched. Open "what the scan read".','err');
+  if(RC_DUP){
+    rcStatus('This invoice was already imported. Stock update is blocked to avoid double-counting.','err');
+  } else if(tot>0){
+    rcStatus('Found '+tot+' line'+(tot===1?'':'s')+' — '+RC_KNOWN.length+' in inventory, '+RC_NEW.length+' new.','ok');
+  } else {
+    rcStatus('Supplier read, but no line items matched. Open "what the scan read".','err');
+  }
+  rcUpdateBar();
+}
+
+// Extract invoice/order reference number
+function rcInvoiceRef(text, sup){
+  var ref=null, m;
+  if(sup==='CCEP'){
+    m=text.match(/Order\s*reference[.:#\s]*([0-9]{5,})/i) || text.match(/Order\s*Number[.:#\s]*([0-9]{5,})/i);
+    if(m) ref=m[1];
+  } else if(sup==='B&E Foods'){
+    m=text.match(/Invoice\s*No[.:#\s]*([0-9]{5,})/i) || text.match(/Invoice\s*Number[.:#\s]*([0-9]{5,})/i);
+    if(m) ref=m[1];
+  }
+  if(!ref){ // generic fallback near invoice/order/reference keywords
+    m=text.match(/(?:invoice|order|reference|ref)[^0-9]{0,14}([0-9]{6,})/i);
+    if(m) ref=m[1];
+  }
+  return ref;
+}
+// Extract a date for display (dd/mm/yyyy or "Mon dd, yyyy")
+function rcInvoiceDate(text){
+  var m=text.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+  if(m) return m[1];
+  m=text.match(/([A-Z][a-z]{2}\s+\d{1,2},?\s+\d{4})/);
+  if(m) return m[1];
+  return null;
+}
+// localStorage record of imported invoices: key = supplier|ref
+function rcImportedKey(sup,ref){ return 'wr_inv_'+sup.replace(/\s+/g,'')+'_'+ref; }
+function rcImportedGet(sup,ref){
+  try{ var v=localStorage.getItem(rcImportedKey(sup,ref)); return v?JSON.parse(v):null; }catch(e){ return null; }
+}
+function rcImportedSet(sup,ref,count){
+  try{
+    localStorage.setItem(rcImportedKey(sup,ref), JSON.stringify({date:(RC_INVDATE||new Date().toLocaleDateString('en-AU')), ts:Date.now(), count:count}));
+  }catch(e){}
 }
 
 function rcDetectSupplier(text){
@@ -4891,6 +4950,13 @@ function rcRender(){
 function rcUpdateBar(){
   var k=RC_KNOWN.filter(function(x){return x.qty>0;}).length;
   var n=RC_NEW.filter(function(x){return x.added;}).length;
+  if(RC_DUP){
+    g('rc-save-detail').textContent='⛔ Already imported — stock update blocked';
+    g('rc-save-btn').disabled=true;
+    g('rc-save-btn').style.background='#d1d5db';
+    return;
+  }
+  g('rc-save-btn').style.background='var(--green)';
   g('rc-save-detail').textContent=(k+n)?(k+' stock update'+(k===1?'':'s')+(n?', '+n+' new product'+(n===1?'':'s'):'')):'Nothing to save yet';
   g('rc-save-btn').disabled=(k+n)===0;
 }
@@ -4925,6 +4991,7 @@ g('rc-raw-toggle').addEventListener('click',function(){var b=g('rc-raw');var on=
 
 // Save → update real inventory (optimistic, no full reload)
 g('rc-save-btn').addEventListener('click',function(){
+  if(RC_DUP){ alert('This invoice was already imported. Stock update is blocked to prevent double-counting.'); return; }
   var ups=RC_KNOWN.filter(function(x){return x.qty>0;});
   if(!ups.length){ alert('No stock updates to save'); return; }
   if(!confirm('Add received quantities to stock for '+ups.length+' item'+(ups.length===1?'':'s')+'?')) return;
@@ -4938,13 +5005,15 @@ g('rc-save-btn').addEventListener('click',function(){
       invItem.qty=newQty;
       if(it.cost!=null) invItem.cost=it.cost; // store cost if your sheet has it
     }
-    api('updateItem',{itemId:it.id, sku:(invItem?invItem.sku:''), name:(invItem?invItem.name:it.name), cat:(invItem?invItem.cat:''), qty:newQty, unit:(invItem?invItem.unit:it.unit), threshold:(invItem?invItem.threshold:0), username:(U?U.username:''), supplierSku:it.code, supplierName:RC_SUP}).then(function(){
+    api('updateItem',{itemId:it.id, sku:(invItem?invItem.sku:''), name:(invItem?invItem.name:it.name), cat:(invItem?invItem.cat:''), qty:newQty, unit:(invItem?invItem.unit:it.unit), threshold:(invItem?invItem.threshold:0), username:(U?U.username:''), supplierSku:it.code, supplierName:RC_SUP, cost:(it.cost!=null?it.cost:'')}).then(function(){
       done++;
       if(done===ups.length){
         hov();
+        // record this invoice as imported so re-scans are blocked
+        if(RC_REF){ rcImportedSet(RC_SUP, RC_REF, ups.length); RC_DUP=true; }
         if(typeof renderInv==='function') renderInv();
         if(typeof renderDash==='function') renderDash();
-        rcStatus('Saved '+ups.length+' stock update'+(ups.length===1?'':'s')+' ✓','ok');
+        rcStatus('Saved '+ups.length+' stock update'+(ups.length===1?'':'s')+' ✓'+(RC_REF?' · invoice #'+RC_REF+' logged':''),'ok');
         // reset received quantities so they aren't double-applied
         RC_KNOWN.forEach(function(x){x.qty=0; x.curQty=(INV.find(function(y){return y.id===x.id;})||{}).qty||x.curQty;});
         rcRender(); rcUpdateBar();
