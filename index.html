@@ -424,12 +424,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
       <div id="sidebar-inner">
         <button class="snav-btn active" id="bn-dash" onclick="gp('dash','Dashboard')"><span class="snav-icon">📊</span><span>Dashboard</span></button>
         <button class="snav-btn" id="bn-inv" onclick="gp('inv','Inventory')"><span class="snav-icon">📦</span><span>Inventory</span></button>
-        <button class="snav-btn" id="bn-entry" onclick="gp('entry','Stock In/Out')"><span class="snav-icon entry-icon">➕</span><span>In / Out</span></button>
         <button class="snav-btn" id="bn-orders" onclick="gp('orders','Order Suggestions')"><span class="snav-icon">📋</span><span>Orders</span><span class="snav-badge-dot" id="orders-badge">0</span></button>
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v2.3</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v2.4</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -607,53 +606,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
     </div>
 
     <!-- ── STOCK IN/OUT ── -->
-    <div class="page" id="page-entry">
-      <div class="sec-hd" style="margin-bottom:10px">
-        <span class="sec-title">Stock In / Out</span>
-        <button onclick="om('m-import')" style="padding:7px 13px;border-radius:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-b);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📋 Import Order</button>
-      </div>
-      <div id="entry-noperm" class="empty-state" style="display:none">
-        <div class="emi">🔒</div><p>You don't have permission<br>to perform transactions</p>
-      </div>
-      <div id="entry-form">
-        <div class="search-bar" style="margin-bottom:8px">
-          <span class="search-ico">🔍</span>
-          <input id="tx-sku-input" placeholder="Scan or type SKU..." autocomplete="off" oninput="onTxSKUInput()" onkeydown="if(event.key==='Enter')lookupTxSKU()">
-          <button onclick="openScanner('tx')" style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;flex-shrink:0;line-height:1">📷</button>
-        </div>
-        <div class="scan-result" id="tx-scanner-result"></div>
-
-        <div class="tx-toggle">
-          <button class="tx-opt active-in" id="opt-in" onclick="setTxType('Stock In')">📦 Stock In</button>
-          <button class="tx-opt" id="opt-out" onclick="setTxType('Stock Out')">🛒 Stock Out</button>
-        </div>
-
-        <div class="form-sec">
-          <div class="fld">
-            <label>Item</label>
-            <select id="tx-item" onchange="updTxStock()"></select>
-          </div>
-        </div>
-
-        <div class="stock-display">
-          <div><div class="sd-label">Current Stock</div><div class="sd-val" id="tx-stock-val">—</div><div class="sd-unit" id="tx-stock-unit"></div></div>
-          <div style="font-size:36px;opacity:.6">📦</div>
-        </div>
-
-        <div class="form-sec">
-          <div class="fld"><label id="tx-qlb">Quantity</label><input type="number" id="tx-qty" min="1" value="1" inputmode="numeric" style="font-size:24px;font-weight:700;text-align:center;padding:14px"></div>
-          <div class="fld" style="margin-bottom:0"><label>Note (optional)</label><input type="text" id="tx-note" placeholder="Supplier / reason..."></div>
-        </div>
-        <div id="tx-msg" style="margin-bottom:12px"></div>
-        <button class="action-btn btn-blue" id="tx-btn" onclick="doTx()">✓ Confirm Stock In</button>
-
-        <div class="scard" style="margin-top:16px">
-          <div class="scard-hd" style="padding-bottom:8px"><span class="scard-title">Recent Transactions</span></div>
-          <div id="tx-recent"></div>
-        </div>
-      </div>
-    </div>
-
     <!-- ── PAYROLL ── -->
     <div class="page" id="page-payroll">
       <div class="scard" id="payroll-report-section"></div>
@@ -1122,11 +1074,11 @@ function loadAll(){
         if(staffSection) staffSection.style.display=viewAsAdmin?'none':'block';
         // Always render admin-level data (inventory, orders etc) if real admin
         if(isRealAdmin){
-          renderInv();renderEntry();renderAna();
+          renderInv();renderAna();
           if(viewAsAdmin){renderDash();renderAdmin();renderPayroll();}
           else{renderStaffDash();}
         } else {
-          renderInv();renderEntry();
+          renderInv();
           renderStaffDash();
         }
         setLoadPct(100);
@@ -1138,7 +1090,7 @@ function loadAll(){
 }
 
 // ════ NAV ════
-var PAGE_TITLES={dash:'Dashboard',inv:'Inventory',orders:'Order Suggestions',entry:'Stock In/Out',ana:'Reports',admin:'Admin',payroll:'Payroll',revenue:'Revenue'};
+var PAGE_TITLES={dash:'Dashboard',inv:'Inventory',orders:'Order Suggestions',ana:'Reports',admin:'Admin',payroll:'Payroll',revenue:'Revenue'};
 function gp(id,title){
   if((id==='admin'||id==='payroll'||id==='revenue') && !(U && U.role==='admin')){
     return;
@@ -2374,14 +2326,31 @@ function saveItem(){
   var supplierSku=g('i-supplier-sku').value.trim();
   var supplierName=g('i-supplier-name').value.trim();
   if(!name||!unit){showMsg('i-msg','err','Please enter item name and unit');return;}
-  ov('Saving...');
-  var call = id ? api('updateItem',{itemId:id,sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName})
-                : api('addItem',{sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName});
-  call.then(function(r){
-    hov();
-    if(!r.ok){showMsg('i-msg','err','❌ '+r.msg);return;}
-    cm('m-item');loadAll();
-  });
+
+  if(id){
+    // ── EDIT existing item: update locally, no full reload ──
+    var it=INV.find(function(x){return x.id===id;});
+    if(it){
+      it.sku=sku||it.sku; it.name=name; it.cat=cat;
+      it.qty=Number(qty); it.unit=unit; it.threshold=Number(thr)||0;
+      it.supplierSku=supplierSku; it.supplierName=supplierName;
+    }
+    cm('m-item');
+    renderInv(); renderDash();
+    updateDashOrdersCount&&updateDashOrdersCount();
+    // Persist in background
+    api('updateItem',{itemId:id,sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName}).then(function(r){
+      if(!r.ok){ alert('Could not save changes: '+r.msg); loadAll(); }
+    });
+  } else {
+    // ── ADD new item: need server-generated id, so reload after ──
+    ov('Saving...');
+    api('addItem',{sku:sku,name:name,cat:cat,qty:qty,unit:unit,threshold:thr,username:(U?U.username:''),supplierSku:supplierSku,supplierName:supplierName}).then(function(r){
+      hov();
+      if(!r.ok){showMsg('i-msg','err','❌ '+r.msg);return;}
+      cm('m-item');loadAll();
+    });
+  }
 }
 function togglePayrollFields(){
   var role=g('u-role').value;
@@ -2498,7 +2467,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='2.3';
+var APP_VER='2.4';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -3995,7 +3964,6 @@ function setAvatar(user){ setTopbarUser(user); }
 
 function updateNavForRole(role){
   var realAdmin=REAL_ADMIN&&REAL_ADMIN.role==='admin';
-  g('bn-entry').style.display  = role==='viewer' ? 'none' : '';
   g('bn-admin').style.display  = (role==='admin'||realAdmin)  ? '' : 'none';
   g('bn-payroll').style.display= (role==='admin'||realAdmin)  ? '' : 'none';
   g('bn-revenue').style.display= (role==='admin'||realAdmin)  ? '' : 'none';
