@@ -64,6 +64,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
 .rc-detbanner{display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:12px;background:#f5f3ff;margin:14px 0 4px;font-size:13px;color:#7c3aed;font-weight:600}
 .rc-detbanner b{font-weight:800}
 .adm-arrow{display:inline-block;font-size:11px;color:var(--text3);transition:transform .15s;margin-right:4px}
+.pk-cath{display:flex;align-items:center;gap:8px;margin:16px 0 8px;cursor:pointer}
+.pk-cath .ar{font-size:11px;color:var(--text3);transition:transform .15s}
+.pk-cath.col .ar{transform:rotate(-90deg)}
+.pk-cath .t{font-size:13px;font-weight:800}
+.pk-cath .ct{font-size:11px;font-weight:700;color:var(--text2);background:#f3f4f6;border-radius:20px;padding:1px 8px}
+.pk-body.col{display:none}
+.pk-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6}
+.pk-rinfo{flex:1;min-width:0}
+.pk-rname{font-size:13px;font-weight:600}
+.pk-rstock{font-size:11px;color:var(--text2);margin-top:1px}
+.pk-rstock.low{color:var(--red);font-weight:600}
+.pk-qbox{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;flex-shrink:0}
+.pk-qbox.has{border-color:var(--blue)}
+.pk-qstep{width:30px;height:36px;border:none;background:#f3f4f6;font-size:18px;font-weight:700;color:var(--text2);cursor:pointer}
+.pk-qin{width:44px;height:36px;border:none;text-align:center;font-size:15px;font-weight:700;font-family:inherit;color:var(--text);-moz-appearance:textfield;background:#fff}
+.pk-qin::-webkit-outer-spin-button,.pk-qin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pk-orow{display:flex;gap:8px;margin-bottom:8px}
+.pk-oname{flex:1;border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--text)}
+.pk-oqty{width:64px;border:1px solid var(--border);border-radius:9px;padding:9px;font-size:13px;font-family:inherit;text-align:center;-moz-appearance:textfield}
+.pk-oqty::-webkit-outer-spin-button,.pk-oqty::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pk-reqcard{border:1px solid var(--border);border-radius:13px;margin-bottom:10px;overflow:hidden}
+.pk-reqtop{padding:13px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pk-reqbadge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+.pk-reqbadge.Pending{background:var(--amber-bg);color:var(--amber)}
+.pk-reqbadge.Approved{background:var(--green-bg);color:var(--green)}
+.pk-reqbadge.Rejected{background:var(--red-bg);color:var(--red)}
+.pk-reqbody{padding:0 13px 13px;border-top:1px solid var(--border);display:none}
+.pk-reqbody.on{display:block}
 #ot{font-size:14px;color:var(--text2);font-weight:500}
 @keyframes sp{to{transform:rotate(360deg)}}
 
@@ -409,14 +437,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
 </div>
 
 <!-- ═══ UPDATE BANNER ═══ -->
-<div id="update-banner" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(12px + var(--safe-bottom));background:var(--blue);border-radius:16px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:999;align-items:center;gap:12px">
-  <div style="font-size:22px">🎉</div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:14px;font-weight:700;color:#fff">New version available</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.85)" id="update-banner-sub">Tap to update now</div>
-  </div>
-  <button onclick="applyUpdate()" style="padding:9px 16px;border-radius:10px;border:none;background:#fff;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Update</button>
-</div>
+
 
 <!-- ═══ LOGIN ═══ -->
 <div id="login">
@@ -458,10 +479,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-inv" onclick="gp('inv','Inventory')"><span class="snav-icon">📦</span><span>Inventory</span></button>
         <button class="snav-btn" id="bn-receive" onclick="gp('receive','Stock-In')" style="display:none"><span class="snav-icon">📥</span><span>Stock-In</span></button>
         <button class="snav-btn" id="bn-orders" onclick="gp('orders','Order Suggestions')"><span class="snav-icon">📋</span><span>Orders</span><span class="snav-badge-dot" id="orders-badge">0</span></button>
+        <button class="snav-btn" id="bn-picking" onclick="gp('picking','Picking')"><span class="snav-icon">🛒</span><span>Picking</span><span class="snav-badge-dot" id="picking-badge" style="display:none">0</span></button>
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.0</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.2</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -550,6 +572,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button id="rc-save-btn" style="width:100%;padding:15px;border-radius:13px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" disabled>✓ Update inventory</button>
         <div id="rc-save-detail" style="text-align:center;font-size:12px;color:var(--text2);margin-top:8px"></div>
       </div>
+    </div>
+
+    <!-- ── PICKING ── -->
+    <div class="page" id="page-picking">
+      <div id="pick-staff-view"></div>
+      <div id="pick-admin-view" style="display:none"></div>
     </div>
 
     <!-- ── ORDER SUGGESTIONS ── -->
@@ -708,11 +736,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
             <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Net Sales (Square)</div>
             <div id="rev-total" style="font-size:20px;font-weight:700;color:var(--green)">—</div>
             <div id="rev-txn" style="font-size:10px;color:var(--text2);margin-top:2px">—</div>
+            <div id="rev-sq-wow" style="font-size:11px;font-weight:700;margin-top:3px"></div>
           </div>
           <div class="scard" style="padding:12px 14px;border:2px solid var(--blue)">
             <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Net Sales (Actual)</div>
             <div id="rev-net-actual" style="font-size:20px;font-weight:700;color:var(--blue)">—</div>
             <div style="font-size:10px;color:var(--text2);margin-top:2px">card + cash actual</div>
+            <div id="rev-act-wow" style="font-size:11px;font-weight:700;margin-top:3px"></div>
           </div>
         </div>
         <!-- Row 2: Card / Cash Square / Cash Actual -->
@@ -897,9 +927,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <select id="u-role" onchange="togglePayrollFields()">
           <option value="viewer">👁 Viewer (read-only)</option>
           <option value="staff">👷 Staff (stock in/out)</option>
+          <option value="mod">🛡 Mod (granted menus)</option>
           <option value="admin">⚙️ Admin (full access)</option>
         </select>
       </div>
+      <div id="u-menu-perms" style="display:none">
+        <div style="padding:8px 12px;background:#f5f3ff;border-radius:10px;margin-bottom:10px;font-size:12px;color:#7c3aed;font-weight:600">🛡 Menus this mod can access (view &amp; edit, no Admin portal)</div>
+        <div id="u-menu-checks" style="display:flex;flex-direction:column;gap:2px;margin-bottom:12px"></div>
+      </div>
+      <input type="hidden" id="u-allowed-menus" value="">
       <div id="u-payroll-fields" style="display:none">
         <div style="padding:8px 12px;background:var(--blue-bg);border-radius:10px;margin-bottom:12px;font-size:12px;color:var(--blue);font-weight:600">💰 Payroll settings</div>
         <div style="font-size:11px;color:var(--text2);margin-bottom:8px;padding:7px 10px;background:#fff7ed;border-radius:8px;border-left:3px solid var(--amber)">
@@ -924,6 +960,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
     <div class="mfoot">
       <button class="action-btn btn-ghost" onclick="cm('m-user')">Cancel</button>
       <button class="action-btn btn-blue" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Picking report ═══ -->
+<div class="mo" id="m-pk-report">
+  <div class="msheet" style="max-height:85vh">
+    <div class="mhandle"></div>
+    <div class="mhead"><span class="mtitle">📄 Picking report</span><button class="mclose" onclick="cm('m-pk-report')">✕</button></div>
+    <div class="mbody">
+      <div id="pk-rep-intro" style="font-size:12px;color:var(--text2);padding:0 2px 4px"></div>
+      <div id="pk-rep-body"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="pkReportExport('img')" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🖼️ Image</button>
+        <button onclick="pkReportExport('pdf')" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">📄 PDF</button>
+      </div>
     </div>
   </div>
 </div>
@@ -982,7 +1034,7 @@ var U=null,INV=[],TX=[],ATTENDANCE=[];
 var TX_TYPE='Stock In';
 var RL={admin:'Admin',staff:'Staff',viewer:'Viewer'};
 var RC={admin:'r-admin',staff:'r-staff',viewer:'r-viewer'};
-var CAT_ICO={'Dry Goods':'🌾','Frozen':'❄️','Beverage':'🥤'};
+var CAT_ICO={'Dry Goods':'🌾','Frozen':'❄️','Beverage':'🥤','Meat':'🥩','Other':'📝'};
 var CAT_CLS={'Dry Goods':'ico-dry','Frozen':'ico-frz','Beverage':'ico-bev'};
 var invCatFilter='',invStFilter='';
 var activeScanContext=null;
@@ -1158,8 +1210,20 @@ function loadAll(){
 // ════ NAV ════
 var PAGE_TITLES={dash:'Dashboard',inv:'Inventory',orders:'Order Suggestions',ana:'Reports',admin:'Admin',payroll:'Payroll',revenue:'Revenue'};
 function gp(id,title){
-  if((id==='admin'||id==='payroll'||id==='revenue'||id==='receive') && !(U && U.role==='admin')){
-    return;
+  // Admin-only pages
+  if((id==='admin'||id==='payroll'||id==='revenue'||id==='receive')){
+    var okAdmin = U && U.role==='admin';
+    var okMod = U && U.role==='mod' && id!=='admin' && modAllowed().indexOf(id)>-1;
+    if(!okAdmin && !okMod) return;
+  }
+  // Mod gating for the rest (dash/inv/orders/picking) — only restrict if user is a mod
+  if(U && U.role==='mod'){
+    var allowed=modAllowed();
+    if(allowed.indexOf(id)===-1 && id!=='picking') {
+      // picking allowed for all roles by default; everything else must be granted
+      if(['dash','inv','orders','payroll','revenue','receive'].indexOf(id)>-1) return;
+    }
+    if(id==='picking' && allowed.indexOf('picking')===-1) return;
   }
   document.querySelectorAll('.page').forEach(function(el){el.classList.remove('on');});
   document.querySelectorAll('.snav-btn').forEach(function(b){b.classList.remove('active');});
@@ -1171,6 +1235,7 @@ function gp(id,title){
   if(id==='payroll') renderPayroll();
   if(id==='revenue') initRevenuePage();
   if(id==='receive') initReceivePage();
+  if(id==='picking') initPickingPage();
 }
 
 // ════ DASHBOARD ════
@@ -2291,6 +2356,7 @@ function renderAdmin(){
 
   api('getUsers').then(function(r){
     if(!r.ok||!r.data)return;
+    ADM_USERS=r.data; // cache for edit lookups (allowedMenus etc.)
     g('adm-usr-list').innerHTML=r.data.map(function(u){
       var av=u.fullname?u.fullname[0].toUpperCase():'?';
       var isSelf = U && U.username===u.username;
@@ -2302,6 +2368,7 @@ function renderAdmin(){
     }).join('');
   });
 }
+var ADM_USERS=[];
 
 // ════ MODALS ════
 function previewSKU(){
@@ -2439,11 +2506,34 @@ function saveItem(){
     });
   }
 }
+// Menus a mod can be granted (Admin portal is never grantable)
+var MOD_MENUS=[
+  {id:'dash', label:'📊 Dashboard'},
+  {id:'inv', label:'📦 Inventory'},
+  {id:'receive', label:'📥 Stock-In'},
+  {id:'orders', label:'🛒 Order Suggestions'},
+  {id:'picking', label:'📋 Picking'},
+  {id:'payroll', label:'🗓 Payroll'},
+  {id:'revenue', label:'💹 Revenue'}
+];
 function togglePayrollFields(){
   var role=g('u-role').value;
-  // Both staff and admin can be paid employees — show rate fields for both.
-  // Only "viewer" (read-only stakeholder) has no payroll.
-  g('u-payroll-fields').style.display=(role==='staff'||role==='admin')?'block':'none';
+  // Both staff and admin can be paid employees — show rate fields. Mod too (they're elevated staff).
+  g('u-payroll-fields').style.display=(role==='staff'||role==='admin'||role==='mod')?'block':'none';
+  // Menu permissions only for mod
+  var mp=g('u-menu-perms');
+  if(mp) mp.style.display=(role==='mod')?'block':'none';
+  if(role==='mod') renderMenuChecks();
+}
+function renderMenuChecks(){
+  var cont=g('u-menu-checks'); if(!cont) return;
+  var current=(g('u-allowed-menus')&&g('u-allowed-menus').value)?g('u-allowed-menus').value.split(','):[];
+  cont.innerHTML=MOD_MENUS.map(function(m){
+    var on=current.indexOf(m.id)>-1;
+    return '<label style="display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px">'+
+      '<input type="checkbox" data-menu="'+m.id+'"'+(on?' checked':'')+' style="width:18px;height:18px;accent-color:#7c3aed">'+
+      '<span>'+m.label+'</span></label>';
+  }).join('');
 }
 function openAddUser(){
   g('m-user-title').textContent='Add User';
@@ -2452,6 +2542,7 @@ function openAddUser(){
   g('u-pw-label').textContent='Password';
   g('u-rate').value='0';g('u-daily').value='0';g('u-super').value='11.5';g('u-sat').value='1.25';g('u-sun').value='1.5';g('u-ph').value='2.0';
   g('u-msg').innerHTML='';
+  if(g('u-allowed-menus')) g('u-allowed-menus').value='';
   if(g('u-delete-btn')) g('u-delete-btn').style.display='none';
   togglePayrollFields();
   om('m-user');
@@ -2472,6 +2563,9 @@ function openEditUser(username,fullname,role,hourlyRate,satRate,sunRate,phRate,s
   g('u-sun').value=sunRate||1.5;
   g('u-ph').value=phRate||2.0;
   g('u-msg').innerHTML='';
+  // pull allowedMenus from cache
+  var uu=ADM_USERS.find(function(x){return x.username===username;});
+  if(g('u-allowed-menus')) g('u-allowed-menus').value=(uu&&uu.allowedMenus)?uu.allowedMenus:'';
   togglePayrollFields();
   // Show delete button — but not for the built-in admin or the current user
   var realName=(REAL_ADMIN?REAL_ADMIN.username:(U?U.username:'')).toLowerCase();
@@ -2505,17 +2599,24 @@ function saveUser(){
   var sat=parseFloat(g('u-sat').value)||1.0;
   var sun=parseFloat(g('u-sun').value)||1.0;
   var ph=parseFloat(g('u-ph').value)||1.0;
+  // collect allowed menus if mod
+  var allowedMenus='';
+  if(role==='mod'){
+    var checks=g('u-menu-checks')?g('u-menu-checks').querySelectorAll('input[data-menu]:checked'):[];
+    allowedMenus=Array.prototype.map.call(checks,function(c){return c.getAttribute('data-menu');}).join(',');
+    if(!allowedMenus){showMsg('u-msg','err','Pick at least one menu for this mod');return;}
+  }
   if(!un||!ht){showMsg('u-msg','err','Please fill all fields');return;}
   if(!isEdit&&!pw){showMsg('u-msg','err','Password is required for new users');return;}
   ov(isEdit?'Saving...':'Creating...');
   if(isEdit){
-    api('updateUser',{username:id,password:pw,fullname:ht,role:role,actingUser:(REAL_ADMIN?REAL_ADMIN.username:U?U.username:''),hourlyRate:rate,satRate:sat,sunRate:sun,phRate:ph,superRate:superR,dailyRate:daily}).then(function(r){
+    api('updateUser',{username:id,password:pw,fullname:ht,role:role,actingUser:(REAL_ADMIN?REAL_ADMIN.username:U?U.username:''),hourlyRate:rate,satRate:sat,sunRate:sun,phRate:ph,superRate:superR,dailyRate:daily,allowedMenus:allowedMenus}).then(function(r){
       hov();if(!r.ok){showMsg('u-msg','err','❌ '+r.msg);return;}
       ALL_USERS_CACHE=[];// force reload on next loadAll
       cm('m-user');renderAdmin();
     });
   } else {
-    api('addUser',{username:un,password:pw,fullname:ht,role:role,actingUser:(REAL_ADMIN?REAL_ADMIN.username:U?U.username:''),hourlyRate:rate,satRate:sat,sunRate:sun,phRate:ph,superRate:superR,dailyRate:daily}).then(function(r){
+    api('addUser',{username:un,password:pw,fullname:ht,role:role,actingUser:(REAL_ADMIN?REAL_ADMIN.username:U?U.username:''),hourlyRate:rate,satRate:sat,sunRate:sun,phRate:ph,superRate:superR,dailyRate:daily,allowedMenus:allowedMenus}).then(function(r){
       hov();if(!r.ok){showMsg('u-msg','err','❌ '+r.msg);return;}
       ALL_USERS_CACHE=[];
       cm('m-user');renderAdmin();
@@ -2554,7 +2655,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='3.0';
+var APP_VER='3.2';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -2567,57 +2668,8 @@ if('serviceWorker' in navigator){
   });
 }
 
-// Active version check — fetch version.json with cache-bust, compare to running APP_VER.
-// This works even when the Service Worker / GitHub CDN is slow to update,
-// because we bypass ALL caches with no-store + a timestamp query param.
-function checkVersion(){
-  fetch('version.json?_='+Date.now(), {cache:'no-store'})
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(data&&data.version&&data.version!==APP_VER&&!UPDATE_PENDING){
-        UPDATE_PENDING=true;
-        // Trigger SW to fetch new files in background
-        if(SW_REG) SW_REG.update().catch(function(){});
-        showUpdateBanner(data.version);
-      }
-    })
-    .catch(function(){});
-}
-
-function showUpdateBanner(newVer){
-  var b=document.getElementById('update-banner');
-  if(b){
-    var sub=document.getElementById('update-banner-sub');
-    if(sub) sub.textContent='v'+APP_VER+' → v'+newVer;
-    b.style.display='flex';
-  }
-}
-
-function applyUpdate(){
-  var sub=document.getElementById('update-banner-sub');
-  if(sub) sub.textContent='Updating...';
-  // Tell waiting SW to activate, then hard reload bypassing cache
-  if(SW_REG&&SW_REG.waiting) SW_REG.waiting.postMessage({type:'SKIP_WAITING'});
-  // Give SW a moment to activate, then reload
-  setTimeout(function(){
-    // Clear caches then reload to guarantee fresh files
-    if('caches' in window){
-      caches.keys().then(function(keys){
-        return Promise.all(keys.map(function(k){return caches.delete(k);}));
-      }).then(function(){ window.location.reload(true); });
-    } else {
-      window.location.reload(true);
-    }
-  }, 400);
-}
-
-// Check on startup, then every 30s, and whenever app regains focus
-window.addEventListener('load', function(){ setTimeout(checkVersion, 2000); });
-setInterval(checkVersion, 30000);
-document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='visible') checkVersion();
-});
-window.addEventListener('focus', checkVersion);
+// Update notifications removed — pull-to-refresh handles getting the latest version.
+// The service worker still auto-updates silently when a new version is deployed.
 
 // ════ INIT ════
 // ════════════════════════════════════════
@@ -4049,12 +4101,42 @@ function setTopbarUser(user){
 // Legacy alias
 function setAvatar(user){ setTopbarUser(user); }
 
+function modAllowed(){
+  // returns array of menu ids a mod may access (from their cached user record)
+  if(!U||U.role!=='mod') return [];
+  var uu=(ADM_USERS&&ADM_USERS.find)?ADM_USERS.find(function(x){return x.username===U.username;}):null;
+  var am=(uu&&uu.allowedMenus)?uu.allowedMenus:(U.allowedMenus||'');
+  return am?am.split(','):[];
+}
 function updateNavForRole(role){
   var realAdmin=REAL_ADMIN&&REAL_ADMIN.role==='admin';
-  g('bn-admin').style.display  = (role==='admin'||realAdmin)  ? '' : 'none';
-  g('bn-payroll').style.display= (role==='admin'||realAdmin)  ? '' : 'none';
-  g('bn-revenue').style.display= (role==='admin'||realAdmin)  ? '' : 'none';
-  var rcBtn=g('bn-receive'); if(rcBtn) rcBtn.style.display= (role==='admin'||realAdmin) ? '' : 'none';
+  var isMod=role==='mod';
+  var allowed=isMod?modAllowed():[];
+  function show(btnId,menuId,adminOnly){
+    var b=g(btnId); if(!b) return;
+    var vis = realAdmin || role==='admin';
+    if(isMod && !adminOnly) vis = allowed.indexOf(menuId)>-1;
+    b.style.display = vis ? '' : 'none';
+  }
+  // Admin portal: admin only, never mod
+  g('bn-admin').style.display = (role==='admin'||realAdmin) ? '' : 'none';
+  // Elevated menus: admin always; mod if granted
+  show('bn-payroll','payroll',false);
+  show('bn-revenue','revenue',false);
+  show('bn-receive','receive',false);
+  var bp=g('bn-picking'); // picking visible to staff+mod(granted)+admin
+  if(bp){
+    if(realAdmin||role==='admin') bp.style.display='';
+    else if(isMod) bp.style.display=allowed.indexOf('picking')>-1?'':'none';
+    else bp.style.display=''; // staff/viewer can request picking
+  }
+  // For mod, also gate the always-on basic menus (dash/inv/orders) to their grant
+  if(isMod){
+    var bnDash=g('bn-dash'), bnInv=g('bn-inv'), bnOrders=g('bn-orders');
+    if(bnDash) bnDash.style.display=allowed.indexOf('dash')>-1?'':'none';
+    if(bnInv) bnInv.style.display=allowed.indexOf('inv')>-1?'':'none';
+    if(bnOrders) bnOrders.style.display=allowed.indexOf('orders')>-1?'':'none';
+  }
 }
 
 // ════ ACCOUNT SWITCHER ════
@@ -4302,6 +4384,30 @@ function renderRevenuePage(){
   if(g('rev-cash-actual')) g('rev-cash-actual').textContent=fmtRevAUD(cashActualTotal);
   if(g('rev-net-actual')) g('rev-net-actual').textContent=fmtRevAUD(netSalesActual);
 
+  // Week-over-week % under the two Net Sales boxes
+  function setWow(elId, cur, prev){
+    var el=g(elId); if(!el) return;
+    if(prev && prev>0){
+      var pct=Math.round((cur-prev)/prev*100);
+      var col=pct>=0?'var(--green)':'var(--red)';
+      el.style.color=col;
+      el.textContent=(pct>=0?'▲ +':'▼ ')+pct+'% vs last week';
+    } else { el.textContent=''; }
+  }
+  if(REV_PREV&&REV_PREV.summary){
+    var ps=REV_PREV.summary, pdays=REV_PREV.days||[];
+    var pCashActual=pdays.reduce(function(sum,d){
+      var entered=REV_CASH_ACTUAL[d.date];
+      return sum+(entered!==undefined&&entered!==''?Math.round(parseFloat(entered)*100):d.cash);
+    },0);
+    var pNetActual=(ps.total||0)-(ps.cash||0)+pCashActual;
+    setWow('rev-sq-wow', s.total||0, ps.total||0);
+    setWow('rev-act-wow', netSalesActual, pNetActual);
+  } else {
+    if(g('rev-sq-wow')) g('rev-sq-wow').textContent='';
+    if(g('rev-act-wow')) g('rev-act-wow').textContent='';
+  }
+
   var maxTotal=Math.max.apply(null,days.map(function(d){return d.total;}));
   var DAY={0:'Sun',1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri',6:'Sat'};
 
@@ -4538,24 +4644,6 @@ function renderRevPnL(){
   var profit=netActual-payroll-expenses;
   var margin=netActual>0?Math.round(Math.abs(profit)/netActual*100):0;
 
-  // Week-over-week net profit comparison (best-effort)
-  var wowProfitHtml='';
-  if(REV_PREV&&REV_PREV.days){
-    var ps=REV_PREV.summary||{}, pdays=REV_PREV.days||[];
-    var pCashActual=pdays.reduce(function(sum,d){
-      var entered=REV_CASH_ACTUAL[d.date];
-      return sum+(entered!==undefined&&entered!==''?Math.round(parseFloat(entered)*100):d.cash);
-    },0);
-    var pNetActual=(ps.total||0)-(ps.cash||0)+pCashActual;
-    // previous week payroll/expenses aren't readily available; compare on net sales-based profit proxy
-    var pProfit=pNetActual-payroll-expenses;
-    if(Math.abs(pProfit)>0){
-      var wd=Math.round((profit-pProfit)/Math.abs(pProfit)*100);
-      var wcol=wd>=0?'var(--green)':'var(--red)';
-      wowProfitHtml='<div style="font-size:11px;font-weight:700;color:'+wcol+'">'+(wd>=0?'+':'')+wd+'% vs last week</div>';
-    }
-  }
-
   function row(lbl,val,col){
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)">'+
       '<span style="font-size:12px;color:var(--text2)">'+lbl+'</span>'+
@@ -4578,7 +4666,6 @@ function renderRevPnL(){
           (profit<0?'-':'')+fmtRevAUD(Math.abs(profit))+
         '</div>'+
         '<div style="font-size:11px;color:var(--text2)">margin '+margin+'%'+(profit<0?' (loss)':'')+'</div>'+
-        wowProfitHtml+
       '</div>'+
     '</div>';
 }
@@ -4706,7 +4793,7 @@ if(!tryRestoreSession()){
 // ── SW lifecycle: activate waiting SW when found ──
 if('serviceWorker' in navigator){
   var swReloaded=false;
-  // When the new SW takes control after applyUpdate(), reload once
+  // When a newly-deployed SW takes control, reload once so the user gets the latest version (silent, no banner)
   navigator.serviceWorker.addEventListener('controllerchange', function(){
     if(swReloaded) return;
     swReloaded=true;
@@ -5081,6 +5168,220 @@ g('rc-btn-photo').addEventListener('click',function(){g('rc-file-photo').click()
 g('rc-btn-pdf').addEventListener('click',function(){g('rc-file-pdf').click();});
 g('rc-file-photo').addEventListener('change',function(e){var f=e.target.files[0];if(f)rcDoPhoto(f);e.target.value='';});
 g('rc-file-pdf').addEventListener('change',function(e){var f=e.target.files[0];if(f)rcDoPDF(f);e.target.value='';});
+
+// ════════════ PICKING ════════════
+var PK_PICK={}, PK_OTHER=[{name:'',qty:''}], PK_COL={}, PK_REQS=[];
+var CAT_SEQ_PICK=['Meat','Frozen','Beverage','Dry Goods','Other'];
+
+function initPickingPage(){
+  // Admins see the approval/report view; staff & mod see the request form.
+  var isAdmin = U && U.role==='admin';
+  g('pick-staff-view').style.display = isAdmin ? 'none':'block';
+  g('pick-admin-view').style.display = isAdmin ? 'block':'none';
+  if(isAdmin){ loadPickRequests(); }
+  else { PK_PICK={}; PK_OTHER=[{name:'',qty:''}]; renderPickStaff(); }
+}
+
+function pkTomorrow(){
+  var d=new Date(); d.setDate(d.getDate()+1);
+  return d.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'short'});
+}
+function pkCats(){
+  // distinct categories present in INV, ordered
+  var present={}; INV.forEach(function(i){present[i.cat||'Other']=true;});
+  var cats=CAT_SEQ_PICK.filter(function(c){return present[c];});
+  Object.keys(present).forEach(function(c){if(cats.indexOf(c)===-1)cats.push(c);});
+  return cats;
+}
+
+function renderPickStaff(){
+  var html='<p style="font-size:13px;color:var(--text2);margin:0 0 12px">Pick what you need pulled from storage for tomorrow. Submit when done — it goes to an admin to approve.</p>'+
+    '<div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-bg);padding:5px 11px;border-radius:8px;margin-bottom:8px">📅 For '+pkTomorrow()+'</div>';
+  pkCats().forEach(function(cat){
+    var items=INV.filter(function(i){return (i.cat||'Other')===cat;});
+    if(!items.length) return;
+    var col=PK_COL[cat];
+    html+='<div class="pk-cath'+(col?' col':'')+'" data-pkcat="'+cat+'"><span class="ar">▼</span><span class="t">'+(CAT_ICO[cat]||'📦')+' '+cat+'</span><span class="ct">'+items.length+'</span></div>';
+    html+='<div class="pk-body'+(col?' col':'')+'">';
+    html+=items.map(function(it){
+      var q=PK_PICK[it.id]||0;
+      var low=status(it.qty,it.threshold)!=='ok';
+      return '<div class="pk-row"><div class="pk-rinfo"><div class="pk-rname">'+it.name+'</div>'+
+        '<div class="pk-rstock'+(low?' low':'')+'">in stock: '+it.qty+' '+it.unit+(low?' · low':'')+'</div></div>'+
+        '<div class="pk-qbox'+(q>0?' has':'')+'"><button class="pk-qstep" data-pkdec="'+it.id+'">−</button>'+
+        '<input class="pk-qin" type="number" inputmode="numeric" value="'+(q||'')+'" placeholder="0" data-pkqty="'+it.id+'">'+
+        '<button class="pk-qstep" data-pkinc="'+it.id+'">+</button></div><span class="pk-rstock" style="min-width:22px">'+it.unit+'</span></div>';
+    }).join('');
+    html+='</div>';
+  });
+  // Other (collapsible, auto-expanding)
+  var oCol=PK_COL['__other'];
+  html+='<div class="pk-cath'+(oCol?' col':'')+'" data-pkcat="__other"><span class="ar">▼</span><span class="t" style="color:#7c3aed">✏️ Other</span></div>';
+  html+='<div class="pk-body'+(oCol?' col':'')+'"><p style="font-size:11px;color:var(--text3);margin:0 0 8px">Anything not in stock — a new row appears as you type. Filed under "Other".</p><div id="pk-other-rows"></div></div>';
+  html+='<div style="margin-top:18px"><button id="pk-submit" style="width:100%;padding:14px;border-radius:13px;border:none;background:var(--blue);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" disabled>Submit request</button>'+
+    '<div id="pk-submit-detail" style="text-align:center;font-size:12px;color:var(--text2);margin-top:8px"></div></div>';
+  g('pick-staff-view').innerHTML=html;
+  renderPkOther();
+  // wire
+  g('pick-staff-view').querySelectorAll('.pk-cath[data-pkcat]').forEach(function(h){h.addEventListener('click',function(){var c=h.getAttribute('data-pkcat');PK_COL[c]=!PK_COL[c];renderPickStaff();});});
+  g('pick-staff-view').querySelectorAll('[data-pkinc]').forEach(function(b){b.addEventListener('click',function(){var id=b.getAttribute('data-pkinc');PK_PICK[id]=(PK_PICK[id]||0)+1;renderPickStaff();pkUpdateSubmit();});});
+  g('pick-staff-view').querySelectorAll('[data-pkdec]').forEach(function(b){b.addEventListener('click',function(){var id=b.getAttribute('data-pkdec');PK_PICK[id]=Math.max(0,(PK_PICK[id]||0)-1);renderPickStaff();pkUpdateSubmit();});});
+  g('pick-staff-view').querySelectorAll('[data-pkqty]').forEach(function(inp){inp.addEventListener('input',function(){var id=inp.getAttribute('data-pkqty');var v=parseInt(inp.value);PK_PICK[id]=isNaN(v)?0:Math.max(0,v);pkUpdateSubmit();var bx=inp.closest('.pk-qbox');if(bx)bx.classList.toggle('has',PK_PICK[id]>0);});});
+  var sb=g('pk-submit'); if(sb) sb.addEventListener('click',pkSubmit);
+  pkUpdateSubmit();
+}
+
+function renderPkOther(){
+  var cont=g('pk-other-rows'); if(!cont) return;
+  var active=document.activeElement;
+  var fIdx=active&&active.getAttribute?(active.getAttribute('data-okname')||active.getAttribute('data-okqty')):null;
+  var fType=active&&active.hasAttribute?(active.hasAttribute('data-okname')?'name':(active.hasAttribute('data-okqty')?'qty':null)):null;
+  cont.innerHTML=PK_OTHER.map(function(r,idx){
+    return '<div class="pk-orow"><input class="pk-oname" placeholder="Item name" value="'+escAttrPk(r.name)+'" data-okname="'+idx+'">'+
+      '<input class="pk-oqty" type="number" inputmode="numeric" placeholder="Qty" value="'+escAttrPk(r.qty)+'" data-okqty="'+idx+'"></div>';
+  }).join('');
+  cont.querySelectorAll('[data-okname]').forEach(function(inp){inp.addEventListener('input',function(){PK_OTHER[+inp.getAttribute('data-okname')].name=inp.value;pkEnsureSpare();pkUpdateSubmit();});});
+  cont.querySelectorAll('[data-okqty]').forEach(function(inp){inp.addEventListener('input',function(){PK_OTHER[+inp.getAttribute('data-okqty')].qty=inp.value;pkEnsureSpare();pkUpdateSubmit();});});
+  if(fIdx!==null&&fType){var sel=fType==='name'?'[data-okname="'+fIdx+'"]':'[data-okqty="'+fIdx+'"]';var el=cont.querySelector(sel);if(el){el.focus();try{if(el.value)el.setSelectionRange(el.value.length,el.value.length);}catch(e){}}}
+}
+function pkEnsureSpare(){
+  var ne=PK_OTHER.filter(function(r){return (r.name&&r.name.trim())||(r.qty&&String(r.qty).trim());});
+  PK_OTHER=ne.concat([{name:'',qty:''}]);
+  renderPkOther();
+}
+function pkOtherFilled(){ return PK_OTHER.filter(function(r){return r.name&&r.name.trim()&&parseInt(r.qty)>0;}); }
+function escAttrPk(s){return String(s==null?'':s).replace(/"/g,'&quot;');}
+
+function pkUpdateSubmit(){
+  var picks=Object.keys(PK_PICK).filter(function(id){return PK_PICK[id]>0;}).length;
+  var others=pkOtherFilled().length;
+  var total=picks+others;
+  var sb=g('pk-submit'), de=g('pk-submit-detail');
+  if(de) de.textContent=total?(picks+' from stock'+(others?', '+others+' to order':'')):'Add items to pick';
+  if(sb) sb.disabled=total===0;
+}
+
+function pkSubmit(){
+  var items=[];
+  Object.keys(PK_PICK).forEach(function(id){
+    if(PK_PICK[id]>0){var it=INV.find(function(x){return x.id===id;});if(it)items.push({itemId:id,name:it.name,cat:it.cat||'Other',unit:it.unit||'',qty:PK_PICK[id]});}
+  });
+  pkOtherFilled().forEach(function(r){items.push({itemId:null,name:r.name.trim(),cat:'Other',unit:'',qty:parseInt(r.qty)});});
+  if(!items.length)return;
+  ov('Submitting...');
+  api('createPickRequest',{username:(U?U.username:''),items:JSON.stringify(items)}).then(function(r){
+    hov();
+    if(!r.ok){alert('Could not submit: '+(r.msg||''));return;}
+    PK_PICK={};PK_OTHER=[{name:'',qty:''}];
+    renderPickStaff();
+    alert('✓ Picking request submitted to admin');
+  });
+}
+
+// ── Admin: approve + report ──
+function loadPickRequests(){
+  g('pick-admin-view').innerHTML='<div style="padding:30px;text-align:center;color:var(--text3)">Loading requests…</div>';
+  api('getPickRequests').then(function(r){
+    PK_REQS=(r.ok&&r.data)?r.data:[];
+    renderPickAdmin();
+  });
+}
+function renderPickAdmin(){
+  var pending=PK_REQS.filter(function(r){return r.status==='Pending';});
+  var done=PK_REQS.filter(function(r){return r.status!=='Pending';}).slice(-10).reverse();
+  var html='<p style="font-size:13px;color:var(--text2);margin:0 0 12px">Review picking requests. Approving deducts the picked items from stock and lets you export a report.</p>';
+  html+='<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 10px">Pending ('+pending.length+')</div>';
+  html+= pending.length ? pending.map(pkReqCard).join('') : '<div style="padding:30px;text-align:center;color:var(--text3)">✅ No pending requests</div>';
+  if(done.length){
+    html+='<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 10px">Recent</div>';
+    html+=done.map(pkReqCard).join('');
+  }
+  g('pick-admin-view').innerHTML=html;
+  g('pick-admin-view').querySelectorAll('.pk-reqtop').forEach(function(t){t.addEventListener('click',function(){t.parentElement.querySelector('.pk-reqbody').classList.toggle('on');});});
+  g('pick-admin-view').querySelectorAll('[data-pkapprove]').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();pkApprove(b.getAttribute('data-pkapprove'));});});
+  g('pick-admin-view').querySelectorAll('[data-pkreject]').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();pkReject(b.getAttribute('data-pkreject'));});});
+  g('pick-admin-view').querySelectorAll('[data-pkreport]').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();pkReport(b.getAttribute('data-pkreport'));});});
+}
+function pkReqTime(iso){ try{ return new Date(iso).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return iso||''; } }
+function pkReqCard(r){
+  var cats={}; r.items.forEach(function(it){(cats[it.cat||'Other']=cats[it.cat||'Other']||[]).push(it);});
+  var body=Object.keys(cats).map(function(cat){
+    return '<div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 5px">'+cat+'</div>'+
+      cats[cat].map(function(it){return '<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0"><span>'+escHtmlPk(it.name)+'</span><span style="font-weight:700;color:var(--blue)">'+it.qty+' '+(it.unit||'')+'</span></div>';}).join('');
+  }).join('');
+  var actions = r.status==='Pending'
+    ? '<div style="display:flex;gap:8px;margin-top:14px"><button class="pk-app-btn" data-pkapprove="'+r.id+'" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--green);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">✓ Approve &amp; deduct</button><button data-pkreport="'+r.id+'" style="padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:13px;cursor:pointer">📄</button><button data-pkreject="'+r.id+'" style="padding:11px 14px;border-radius:10px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer">✕</button></div>'
+    : '<div style="display:flex;gap:8px;margin-top:14px"><button data-pkreport="'+r.id+'" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--border);background:#f9fafb;font-size:13px;font-weight:700;cursor:pointer">📄 Export report</button></div>';
+  return '<div class="pk-reqcard"><div class="pk-reqtop"><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">'+escHtmlPk(r.requestedBy||'Staff')+'</div><div style="font-size:11px;color:var(--text2);margin-top:1px">'+pkReqTime(r.time)+' · '+r.items.length+' items</div></div><span class="pk-reqbadge '+r.status+'">'+r.status+'</span></div>'+
+    '<div class="pk-reqbody">'+body+actions+'</div></div>';
+}
+function pkApprove(id){
+  var r=PK_REQS.find(function(x){return x.id===id;}); if(!r)return;
+  if(!confirm('Approve this request? Stock items will be deducted from inventory.'))return;
+  ov('Approving...');
+  api('approvePickRequest',{id:id,approvedBy:(U?U.username:'')}).then(function(res){
+    hov();
+    if(!res.ok){alert('Could not approve: '+(res.msg||''));return;}
+    // optimistic local stock deduction
+    r.items.forEach(function(it){if(it.itemId){var inv=INV.find(function(x){return x.id===it.itemId;});if(inv)inv.qty=Math.max(0,(inv.qty||0)-(it.qty||0));}});
+    r.status='Approved';
+    if(typeof renderInv==='function') renderInv();
+    if(typeof renderDash==='function') renderDash();
+    renderPickAdmin();
+  });
+}
+function pkReject(id){
+  if(!confirm('Reject this request?'))return;
+  ov('Rejecting...');
+  api('rejectPickRequest',{id:id,approvedBy:(U?U.username:'')}).then(function(res){
+    hov();
+    if(!res.ok){alert('Could not reject: '+(res.msg||''));return;}
+    var r=PK_REQS.find(function(x){return x.id===id;}); if(r)r.status='Rejected';
+    renderPickAdmin();
+  });
+}
+function pkReport(id){
+  var r=PK_REQS.find(function(x){return x.id===id;}); if(!r)return;
+  var cats={}; r.items.forEach(function(it){(cats[it.cat||'Other']=cats[it.cat||'Other']||[]).push(it);});
+  var order=Object.keys(cats).sort(function(a,b){return a==='Other'?1:b==='Other'?-1:0;});
+  var body=order.map(function(cat){
+    return '<div style="padding:12px 18px 4px;font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em">'+cat+'</div>'+
+      cats[cat].map(function(it){return '<div style="display:flex;justify-content:space-between;padding:7px 18px;font-size:14px;border-bottom:1px solid #f3f4f6"><span>'+escHtmlPk(it.name)+'</span><span style="font-weight:700">'+it.qty+(it.unit?' '+it.unit:'')+'</span></div>';}).join('');
+  }).join('');
+  g('pk-rep-intro').textContent='Picking request from '+(r.requestedBy||'staff')+' · '+pkReqTime(r.time);
+  g('pk-rep-body').innerHTML=body;
+  g('m-pk-report').classList.add('on');
+}
+function escHtmlPk(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pkReportExport(kind){
+  var el=document.getElementById('pk-rep-body'); if(!el)return;
+  loadHtml2Canvas(function(){
+    ov(kind==='pdf'?'Generating PDF...':'Generating image...');
+    html2canvas(el,{scale:2,backgroundColor:'#fff'}).then(function(canvas){
+      if(kind==='img'){
+        hov();
+        canvas.toBlob(function(blob){
+          var file=new File([blob],'picking-report.png',{type:'image/png'});
+          if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],title:'Picking Report'}).catch(function(){}); }
+          else { var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='picking-report.png';a.click(); }
+        },'image/png');
+      } else {
+        var s2=document.createElement('script');
+        s2.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s2.onload=function(){
+          var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+          var w=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+          var imgW=w-16, imgH=(canvas.height/canvas.width)*imgW;
+          if(imgH<=ph-16){ pdf.addImage(canvas.toDataURL('image/png'),'PNG',8,8,imgW,imgH); }
+          else { var pageH=ph-16,pos=0,rem=imgH; while(rem>0){ pdf.addImage(canvas.toDataURL('image/png'),'PNG',8,8-pos,imgW,imgH); rem-=pageH; if(rem>0){pdf.addPage();pos+=pageH;} } }
+          hov(); pdf.save('picking-report.pdf');
+        };
+        document.head.appendChild(s2);
+      }
+    }).catch(function(){hov();alert('Export failed');});
+  });
+}
+
 </script>
 <!-- Invoice scanning libs (loaded lazily; only used on Receive Stock page) -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
