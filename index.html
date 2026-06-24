@@ -484,7 +484,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.3</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.4</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -825,12 +825,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
       <div id="adm-sec-items">
         <div class="filter-pills" id="adm-pills">
           <button class="pill active" onclick="setAdmFilter('',this)">All</button>
-          <button class="pill" onclick="setAdmFilter('Dry Goods',this)">🌾 Dry</button>
-          <button class="pill" onclick="setAdmFilter('Frozen',this)">❄️ Frozen</button>
-          <button class="pill" onclick="setAdmFilter('Beverage',this)">🥤 Beverage</button>
-          <button class="pill" onclick="setAdmFilter('Meat',this)">🥩 Meat</button>
         </div>
         <div class="scard" id="adm-inv-list"></div>
+      </div>
+
+      <div class="sec-hd" style="margin-top:20px;cursor:pointer" onclick="toggleAdmSection('cats')">
+        <span class="sec-title"><span class="adm-arrow" id="adm-arrow-cats">▼</span> Categories</span>
+        <button onclick="event.stopPropagation();openAddCategory()" style="padding:8px 14px;border-radius:10px;background:var(--blue);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer">+ Add</button>
+      </div>
+      <div id="adm-sec-cats">
+        <div class="scard" id="adm-cat-list"></div>
       </div>
     </div>
 
@@ -986,6 +990,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
   </div>
 </div>
 
+<!-- ═══ MODAL: Add / Edit Category ═══ -->
+<div class="mo" id="m-cat">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mhead"><span class="mtitle" id="m-cat-title">Add Category</span><button class="mclose" onclick="cm('m-cat')">✕</button></div>
+    <div class="mbody">
+      <div class="fld"><label>Category name</label><input type="text" id="cat-name" placeholder="e.g. Snacks" autocomplete="off"></div>
+      <div class="fld"><label>Icon</label>
+        <div id="cat-icon-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:4px"></div>
+      </div>
+      <input type="hidden" id="cat-icon" value="📦">
+      <input type="hidden" id="cat-old-name" value="">
+      <div id="cat-msg" style="margin-bottom:8px"></div>
+      <button id="cat-delete-btn" onclick="deleteCategoryConfirm()" style="display:none;width:100%;padding:11px;border-radius:10px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px">🗑 Delete this category</button>
+    </div>
+    <div class="mfoot">
+      <button class="action-btn btn-ghost" onclick="cm('m-cat')">Cancel</button>
+      <button class="action-btn btn-blue" onclick="saveCategory()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Dashboard Metric Detail (generic, reused for Total/InStock/Low/Out/Orders) ═══ -->
 <div class="mo" id="m-detail">
   <div class="msheet" style="max-height:85vh">
@@ -1040,8 +1066,48 @@ var U=null,INV=[],TX=[],ATTENDANCE=[];
 var TX_TYPE='Stock In';
 var RL={admin:'Admin',staff:'Staff',viewer:'Viewer'};
 var RC={admin:'r-admin',staff:'r-staff',viewer:'r-viewer'};
+// Categories are loaded from the backend (single source of truth, synced across devices).
+// CATEGORIES = [{name, icon}]; CAT_ICO/CAT_CLS kept as fallbacks for colour classes.
+var CATEGORIES=[];
 var CAT_ICO={'Dry Goods':'🌾','Frozen':'❄️','Beverage':'🥤','Meat':'🥩','Other':'📝'};
-var CAT_CLS={'Dry Goods':'ico-dry','Frozen':'ico-frz','Beverage':'ico-bev'};
+var CAT_CLS={'Dry Goods':'ico-dry','Frozen':'ico-frz','Beverage':'ico-bev','Meat':'ico-meat'};
+function catIcon(name){
+  var c=CATEGORIES.find(function(x){return x.name===name;});
+  if(c&&c.icon) return c.icon;
+  return CAT_ICO[name]||'📦';
+}
+function catCls(name){ return CAT_CLS[name]||''; }
+function catNames(){ return CATEGORIES.map(function(c){return c.name;}); }
+// Fill all category dropdowns + filter pills from CATEGORIES
+function fillCategoryUI(){
+  // Add/Edit item dropdown
+  var sel=g('i-cat');
+  if(sel){ var cur=sel.value; sel.innerHTML=CATEGORIES.map(function(c){return '<option value="'+c.name.replace(/"/g,'&quot;')+'">'+c.icon+' '+c.name+'</option>';}).join(''); if(cur) sel.value=cur; }
+  // Order "by category" dropdown
+  var osel=g('ord-cat-select');
+  if(osel){ var ocur=osel.value; osel.innerHTML='<option value="">Choose a category...</option>'+CATEGORIES.map(function(c){return '<option value="'+c.name.replace(/"/g,'&quot;')+'">'+c.icon+' '+c.name+'</option>';}).join(''); if(ocur) osel.value=ocur; }
+  // Inventory filter pills (categories + status)
+  var ip=g('inv-pills');
+  if(ip){ ip.innerHTML='<button class="pill active" onclick="setInvFilter(\'cat\',\'\',this)">All</button>'+
+    CATEGORIES.map(function(c){return '<button class="pill" onclick="setInvFilter(\'cat\',\''+c.name.replace(/'/g,"\\'")+'\',this)">'+c.icon+' '+c.name+'</button>';}).join('')+
+    '<button class="pill" onclick="setInvFilter(\'st\',\'low\',this)">⚠️ Low</button><button class="pill" onclick="setInvFilter(\'st\',\'out\',this)">🚫 Out</button>'; }
+  // Order filter pills
+  var op=g('ord-cat-pills');
+  if(op){ op.innerHTML='<button class="pill active" onclick="setOrdCatFilter(\'\',this)">All</button>'+
+    CATEGORIES.map(function(c){return '<button class="pill" onclick="setOrdCatFilter(\''+c.name.replace(/'/g,"\\'")+'\',this)">'+c.icon+' '+c.name+'</button>';}).join(''); }
+  // Admin catalogue filter pills
+  var ap=g('adm-pills');
+  if(ap){ ap.innerHTML='<button class="pill active" onclick="setAdmFilter(\'\',this)">All</button>'+
+    CATEGORIES.map(function(c){return '<button class="pill" onclick="setAdmFilter(\''+c.name.replace(/'/g,"\\'")+'\',this)">'+c.icon+' '+c.name+'</button>';}).join(''); }
+}
+function loadCategories(cb){
+  api('getCategories').then(function(r){
+    CATEGORIES=(r.ok&&r.data&&r.data.length)?r.data:[{name:'Dry Goods',icon:'🌾'},{name:'Frozen',icon:'❄️'},{name:'Beverage',icon:'🥤'},{name:'Meat',icon:'🥩'}];
+    fillCategoryUI();
+    if(typeof INV!=='undefined' && INV && INV.length && typeof renderInv==='function') renderInv();
+    if(cb) cb();
+  }).catch(function(){ if(cb) cb(); });
+}
 var invCatFilter='',invStFilter='';
 var activeScanContext=null;
 var scanStream=null,scanRAF=null;
@@ -1184,6 +1250,7 @@ function startApp(){
 function loadAll(){
   ovStart('Loading...');
   setLoadPct(8);
+  loadCategories(); // load category list + fill dropdowns/pills (async, non-blocking)
   api('getInventory').then(function(r1){
     INV=(r1.ok&&r1.data)?r1.data:[];
     setLoadPct(38);
@@ -1311,7 +1378,7 @@ function pkPickupOpen(){
   var order=Object.keys(cats).sort(function(a,b){return a==='Other'?1:b==='Other'?-1:(a.localeCompare(b));});
   var body=order.map(function(cat){
     var items=cats[cat].sort(function(a,b){return a.name.localeCompare(b.name);});
-    return '<div style="padding:12px 18px 4px;font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em">'+(CAT_ICO[cat]||'📦')+' '+cat+'</div>'+
+    return '<div style="padding:12px 18px 4px;font-size:12px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:.05em">'+catIcon(cat)+' '+cat+'</div>'+
       items.map(function(it){return '<div style="display:flex;justify-content:space-between;padding:7px 18px;font-size:14px;border-bottom:1px solid #f3f4f6"><span>'+escHtmlPk(it.name)+'</span><span style="font-weight:700">'+it.qty+(it.unit?' '+it.unit:'')+'</span></div>';}).join('');
   }).join('');
   g('pk-rep-intro').textContent='Consolidated pickup list — '+PK_PICKUP.length+' items from approved requests';
@@ -1393,7 +1460,7 @@ function renderDetailItemList(items){
     var color = st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)';
     var bg = st==='out'?'#fef2f2':st==='low'?'#fffbeb':'#f3f4f6';
     return '<div class="detail-item-row">'+
-      '<div class="detail-item-ico" style="background:'+bg+'">'+(CAT_ICO[i.cat]||'📦')+'</div>'+
+      '<div class="detail-item-ico" style="background:'+bg+'">'+catIcon(i.cat)+'</div>'+
       '<div class="detail-item-info"><div class="detail-item-name">'+i.name+'</div>'+
       '<div class="detail-item-meta">'+skuTag(i.sku)+' · '+i.cat+' · threshold '+i.threshold+'</div></div>'+
       '<div class="detail-item-right" style="color:'+color+'">'+i.qty+' <span style="font-size:11px;color:var(--text3);font-weight:500">'+i.unit+'</span></div>'+
@@ -1405,7 +1472,7 @@ function renderDetailOrdersList(orders){
   if(!orders.length) return '<div class="empty-state"><div class="emi">📋</div><p>No pending order suggestions</p></div>';
   var isAdmin = U && U.role==='admin';
   return orders.map(function(o){
-    var ico = o.isNewProduct ? '✨' : (CAT_ICO[o.category]||'📦');
+    var ico = o.isNewProduct ? '✨' : catIcon(o.category);
     var metaParts=[];
     if(o.sku) metaParts.push(o.sku);
     metaParts.push('Qty: '+o.suggestedQty);
@@ -1544,7 +1611,7 @@ function renderInv(){
       rightSide = '<div class="item-qty" style="color:'+(st==='out'?'var(--red)':st==='low'?'var(--amber)':'var(--text)')+'">'+i.qty+'</div><div class="item-unit">'+i.unit+'</div>';
     }
     return '<div class="item-row"'+rowClick+' id="inv-row-'+i.id+'">'+
-      '<div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( CAT_ICO[i.cat]||'📦')+'</div>'+
+      '<div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( catIcon(i.cat))+'</div>'+
       '<div class="item-info"><div class="item-name">'+i.name+'</div><div class="item-meta"><span class="status-dot dot-'+st+'"></span>'+skuTag(i.sku)+(i.sku?' · ':'')+'<span style="color:var(--text3)">thresh: '+i.threshold+'</span>'+((i.cost&&i.cost>0)?'<span style="color:var(--blue);font-weight:600">· $'+Number(i.cost).toFixed(2)+'/'+i.unit+'</span>':'')+'</div></div>'+
       '<div class="item-right">'+rightSide+'</div>'+
     '</div>';
@@ -1874,7 +1941,7 @@ function clearOrdSelection(){
 
 function showOrdSelected(){
   if(!ordSelected) return;
-  var ico = ordSelected.isNew ? '✨' : (CAT_ICO[ordSelected.cat]||'📦');
+  var ico = ordSelected.isNew ? '✨' : catIcon(ordSelected.cat);
   var metaParts=[];
   // Supplier ID shown first and prominently — this is what staff need to
   // copy when placing the order on the supplier's website
@@ -2116,7 +2183,7 @@ function renderOrderSuggestions(){
   }
 
   g('ord-pending-list').innerHTML = pending.length ? pending.map(function(o){
-    var ico = o.isNewProduct ? '✨' : (CAT_ICO[o.category]||'📦');
+    var ico = o.isNewProduct ? '✨' : catIcon(o.category);
     var isAuto = o.source==='auto';
     var metaParts=[];
     var supB=supplierBadge(o);
@@ -2147,7 +2214,7 @@ function renderOrderSuggestions(){
   }).join('') : '<div class="empty-state"><div class="emi">📋</div><p>No pending suggestions'+(ORD_CAT_FILTER?' in '+ORD_CAT_FILTER:'')+'</p></div>';
 
   g('ord-resolved-list').innerHTML = resolved.length ? resolved.map(function(o){
-    var ico = o.isNewProduct ? '✨' : (CAT_ICO[o.category]||'📦');
+    var ico = o.isNewProduct ? '✨' : catIcon(o.category);
     var statusCls = o.status==='Ordered' ? 'ord-status-ordered' : 'ord-status-rejected';
     var metaParts=[];
     var supB=supplierBadge(o);
@@ -2406,11 +2473,83 @@ function toggleAdmSection(which){
   var sec=g('adm-sec-'+which), arr=g('adm-arrow-'+which);
   if(sec) sec.style.display=ADM_COLLAPSED[which]?'none':'';
   if(arr) arr.style.display='inline-block', arr.style.transform=ADM_COLLAPSED[which]?'rotate(-90deg)':'';
+  if(which==='cats' && !ADM_COLLAPSED[which]) renderCatList();
 }
+
+// ── Category management ──
+var CAT_ICON_CHOICES=['📦','🌾','❄️','🥤','🍺','🥩','🍗','🐟','🦐','🥬','🥦','🍅','🌶️','🧂','🍚','🍝','🍞','🧀','🥚','🧊','🧴','🥫','🍫','🍬','🧇','🥡','🍴','📝','🧺','🫙','🍋','☕'];
+function renderCatList(){
+  var box=g('adm-cat-list'); if(!box) return;
+  if(!CATEGORIES.length){ box.innerHTML='<div class="empty-state"><p>No categories yet</p></div>'; return; }
+  // count items per category from INV
+  var counts={}; INV.forEach(function(i){var c=i.cat||'';counts[c]=(counts[c]||0)+1;});
+  box.innerHTML=CATEGORIES.slice().sort(function(a,b){return a.name.localeCompare(b.name);}).map(function(c){
+    var n=counts[c.name]||0;
+    return '<div class="user-row"><div class="user-av" style="background:#f3f4f6;font-size:20px">'+c.icon+'</div>'+
+      '<div class="user-info"><div class="user-name">'+c.name+'</div><div class="user-role"><span style="font-size:11px;color:var(--text3)">'+n+' item'+(n===1?'':'s')+'</span></div></div>'+
+      '<button onclick="openEditCategory(\''+c.name.replace(/'/g,"\\'")+'\')" style="padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:#f9fafb;font-size:12px;cursor:pointer;font-weight:600;flex-shrink:0">Edit</button></div>';
+  }).join('');
+}
+function renderIconGrid(){
+  var grid=g('cat-icon-grid'); if(!grid) return;
+  var cur=g('cat-icon').value;
+  grid.innerHTML=CAT_ICON_CHOICES.map(function(ic){
+    var on=ic===cur;
+    return '<button type="button" data-ic="'+ic+'" style="font-size:20px;padding:8px 0;border-radius:9px;border:'+(on?'2px solid var(--blue)':'1px solid var(--border)')+';background:'+(on?'var(--blue-bg)':'#fff')+';cursor:pointer">'+ic+'</button>';
+  }).join('');
+  grid.querySelectorAll('[data-ic]').forEach(function(b){b.addEventListener('click',function(){g('cat-icon').value=b.getAttribute('data-ic');renderIconGrid();});});
+}
+function openAddCategory(){
+  g('m-cat-title').textContent='Add Category';
+  g('cat-name').value=''; g('cat-name').disabled=false;
+  g('cat-icon').value='📦'; g('cat-old-name').value='';
+  g('cat-msg').innerHTML='';
+  if(g('cat-delete-btn')) g('cat-delete-btn').style.display='none';
+  renderIconGrid();
+  om('m-cat');
+}
+function openEditCategory(name){
+  var c=CATEGORIES.find(function(x){return x.name===name;});
+  g('m-cat-title').textContent='Edit Category';
+  g('cat-name').value=name; g('cat-name').disabled=false;
+  g('cat-icon').value=(c&&c.icon)?c.icon:'📦'; g('cat-old-name').value=name;
+  g('cat-msg').innerHTML='';
+  if(g('cat-delete-btn')) g('cat-delete-btn').style.display='block';
+  renderIconGrid();
+  om('m-cat');
+}
+function saveCategory(){
+  var name=g('cat-name').value.trim();
+  var icon=g('cat-icon').value||'📦';
+  var oldName=g('cat-old-name').value;
+  if(!name){ showMsg('cat-msg','err','Enter a category name'); return; }
+  ov('Saving...');
+  if(oldName){
+    api('updateCategory',{oldName:oldName,newName:name,icon:icon}).then(function(r){
+      hov(); if(!r.ok){ showMsg('cat-msg','err','❌ '+r.msg); return; }
+      cm('m-cat'); loadCategories(function(){ renderCatList(); if(typeof renderInv==='function')renderInv(); renderAdmin(); });
+    });
+  } else {
+    api('addCategory',{name:name,icon:icon}).then(function(r){
+      hov(); if(!r.ok){ showMsg('cat-msg','err','❌ '+r.msg); return; }
+      cm('m-cat'); loadCategories(function(){ renderCatList(); });
+    });
+  }
+}
+function deleteCategoryConfirm(){
+  var name=g('cat-old-name').value; if(!name) return;
+  if(!confirm('Delete category "'+name+'"? Only works if no items use it.')) return;
+  ov('Deleting...');
+  api('deleteCategory',{name:name}).then(function(r){
+    hov(); if(!r.ok){ showMsg('cat-msg','err','❌ '+r.msg); return; }
+    cm('m-cat'); loadCategories(function(){ renderCatList(); });
+  });
+}
+
 function renderAdmin(){
   var items = (admCatFilter ? INV.filter(function(i){return i.cat===admCatFilter;}) : INV.slice()).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
   g('adm-inv-list').innerHTML=items.map(function(i){
-    return '<div class="item-row"><div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( CAT_ICO[i.cat]||'📦')+'</div>'+
+    return '<div class="item-row"><div class="item-ico '+(CAT_CLS[i.cat]||'')+'">'+( catIcon(i.cat))+'</div>'+
       '<div class="item-info"><div class="item-name">'+i.name+'</div><div class="item-meta"><span>'+i.cat+'</span><span>threshold: '+i.threshold+' '+i.unit+'</span>'+((i.cost&&i.cost>0)?'<span style="color:var(--blue);font-weight:600">$'+Number(i.cost).toFixed(2)+'</span>':'')+'</div></div>'+
       '<div style="display:flex;gap:6px;flex-shrink:0">'+
         '<button onclick="openEditItem(\''+i.id+'\')" style="padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:#f9fafb;font-size:12px;cursor:pointer;font-weight:600">Edit</button>'+
@@ -2432,6 +2571,7 @@ function renderAdmin(){
         '</div>';
     }).join('');
   });
+  renderCatList();
 }
 var ADM_USERS=[];
 
@@ -2497,7 +2637,7 @@ function confirmDeleteItem(id){
   g('m-detail-title').textContent='Delete Item?';
   g('m-detail-body').innerHTML=
     '<div class="detail-item-row" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:14px">'+
-      '<div class="detail-item-ico" style="background:'+(CAT_CLS[it.cat]?'#f3f4f6':'#f3f4f6')+'">'+(CAT_ICO[it.cat]||'📦')+'</div>'+
+      '<div class="detail-item-ico" style="background:'+(CAT_CLS[it.cat]?'#f3f4f6':'#f3f4f6')+'">'+catIcon(it.cat)+'</div>'+
       '<div class="detail-item-info"><div class="detail-item-name">'+it.name+'</div>'+
       '<div class="detail-item-meta">'+skuTag(it.sku)+' · '+it.cat+'</div></div>'+
       '<div class="detail-item-right">'+it.qty+' <span style="font-size:11px;color:var(--text3);font-weight:500">'+it.unit+'</span></div>'+
@@ -2719,7 +2859,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='3.3';
+var APP_VER='3.4';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -5298,7 +5438,7 @@ function renderPickStaff(targetId){
     var items=INV.filter(function(i){return (i.cat||'Other')===cat;}).sort(function(a,b){return a.name.localeCompare(b.name);});
     if(!items.length) return;
     var col=(PK_COL[cat]===undefined)?true:PK_COL[cat]; // collapsed by default
-    html+='<div class="pk-cath'+(col?' col':'')+'" data-pkcat="'+cat+'"><span class="ar">▼</span><span class="t">'+(CAT_ICO[cat]||'📦')+' '+cat+'</span><span class="ct">'+items.length+'</span></div>';
+    html+='<div class="pk-cath'+(col?' col':'')+'" data-pkcat="'+cat+'"><span class="ar">▼</span><span class="t">'+catIcon(cat)+' '+cat+'</span><span class="ct">'+items.length+'</span></div>';
     html+='<div class="pk-body'+(col?' col':'')+'">';
     html+=items.map(function(it){
       var q=PK_PICK[it.id]||0;
