@@ -495,7 +495,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
         <button class="snav-btn" id="bn-chpw" onclick="openChangePassword()" style="margin-top:auto"><span class="snav-icon">🔑</span><span>Password</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v4.2</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v4.3</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -1632,7 +1632,7 @@ function renderInv(){
     return true;
   }).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
   if(U&&U.role==='admin'){g('inv-add-btn').innerHTML='<button class="action-btn btn-ghost" onclick="openAddItem()" style="margin-top:4px">+ Add New Item</button>';}
-  var canEditStock = U && (U.role==='admin' || U.role==='staff');
+  var canEditStock = U && (U.role==='admin' || U.role==='staff' || U.role==='mod');
 
   if(!f.length){
     g('inv-list').innerHTML='<div class="empty-state"><div class="emi">🔍</div><p>No items found</p></div>';
@@ -2406,7 +2406,7 @@ function setTxType(type){
 }
 function renderEntry(){
   if(!U)return;
-  var can=U.role==='admin'||U.role==='staff';
+  var can=U.role==='admin'||U.role==='staff'||U.role==='mod';
   g('entry-noperm').style.display=can?'none':'block';
   g('entry-form').style.display=can?'block':'none';
   if(!can)return;
@@ -2916,7 +2916,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='4.2';
+var APP_VER='4.3';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -3538,7 +3538,7 @@ function renderPayrollReportTable(){
   // Load users with payroll data
   api('getUsers').then(function(r){
     try {
-    var staffList=(r.ok&&r.data?r.data:[]).filter(function(u){return (u.role==='staff'||u.role==='admin')&&u.active==='TRUE';});
+    var staffList=(r.ok&&r.data?r.data:[]).filter(function(u){return (u.role==='staff'||u.role==='mod'||u.role==='admin')&&u.active==='TRUE';});
     if(!staffList.length){stopLoading();wrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--text2)">No staff found</div>';return;}
 
     // Debug: log ATTENDANCE status
@@ -3876,7 +3876,7 @@ function renderPayrollDayDetail(){
 }
 
 function openAddShift(){
-  var staffList=ALL_USERS_CACHE.filter(function(u){return u.role==='staff'||u.role==='admin';});
+  var staffList=ALL_USERS_CACHE.filter(function(u){return u.role==='staff'||u.role==='mod'||u.role==='admin';});
   var dateLabel=safeNewDate(PAYROLL_SEL_DATE).toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
   g('m-detail-title').textContent='Add shift · '+dateLabel;
   g('m-detail-body').innerHTML=
@@ -4351,9 +4351,11 @@ function setTopbarUser(user){
       var nm=g('acct-name'), rl=g('acct-role-lbl');
       if(nm) nm.textContent=user.fullname||user.username;
       if(rl){
-        rl.textContent=user.role==='staff'?'Staff':'Viewer';
-        rl.style.background=user.role==='staff'?'var(--blue-bg)':'#f3f4f6';
-        rl.style.color=user.role==='staff'?'var(--blue)':'var(--text2)';
+        var rcMap={admin:['var(--blue-bg)','var(--blue)'],mod:['var(--green-bg)','var(--green)'],staff:['var(--amber-bg)','var(--amber)'],viewer:['#f3f4f6','var(--text2)']};
+        var rcv=rcMap[user.role]||rcMap.viewer;
+        rl.textContent=(RL[user.role]||user.role);
+        rl.style.background=rcv[0];
+        rl.style.color=rcv[1];
       }
     }
   }
