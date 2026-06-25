@@ -1,17 +1,21 @@
 // Wrap&Roll Rockhampton — Service Worker
-// Auto-update strategy: SW activates immediately, reloads clients on update
-// Mobile optimisation: index.html & sw.js always fetched network-first,
-// app polls registration.update() every 30s and on focus/visibility change.
-var CACHE_NAME = 'wraproll-v3.7';
+// Update strategy: network-first for HTML/version so devices always get the latest;
+// only cache *successful* responses (never broken/partial ones) to avoid white screens.
+// The app also polls version.json and force-reloads (clearing caches) when the version changes.
+var CACHE_NAME = 'wraproll-v3.8';
 var APP_SHELL = ['./index.html','./manifest.json','./logo.png'];
 
 self.addEventListener('install', function(e){
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache){
-      return cache.addAll(APP_SHELL);
+      // Cache shell items individually so one missing file doesn't fail the whole install
+      return Promise.all(APP_SHELL.map(function(u){
+        return fetch(u, {cache:'no-store'}).then(function(r){
+          if(r && r.ok) return cache.put(u, r);
+        }).catch(function(){ /* ignore missing asset */ });
+      }));
     }).then(function(){
-      // Activate this new SW immediately, don't wait for old tabs to close
-      return self.skipWaiting();
+      return self.skipWaiting(); // activate immediately
     })
   );
 });
@@ -24,10 +28,8 @@ self.addEventListener('activate', function(e){
             .map(function(k){return caches.delete(k);})
       );
     }).then(function(){
-      // Claim all clients so new SW controls them right away
       return self.clients.claim();
     }).then(function(){
-      // Tell all open tabs to reload so they get the new version
       return self.clients.matchAll({type:'window'}).then(function(clients){
         clients.forEach(function(c){ c.postMessage({type:'SW_UPDATED',version:CACHE_NAME}); });
       });
@@ -47,34 +49,37 @@ self.addEventListener('fetch', function(e){
     return;
   }
 
-  // index.html & version.json — network-first so users always get latest
+  // index.html & version.json — ALWAYS network-first; only cache a fresh OK response.
   if(url.pathname.endsWith('/') || url.pathname.endsWith('index.html') || url.pathname.endsWith('version.json')){
     e.respondWith(
       fetch(e.request).then(function(resp){
-        // Update cache with fresh copy
-        var clone = resp.clone();
-        caches.open(CACHE_NAME).then(function(cache){ cache.put(e.request, clone); });
+        if(resp && resp.ok){
+          var clone = resp.clone();
+          caches.open(CACHE_NAME).then(function(cache){ cache.put(e.request, clone); });
+        }
         return resp;
       }).catch(function(){
-        return caches.match(e.request);
+        return caches.match(e.request).then(function(m){ return m || caches.match('./index.html'); });
       })
     );
     return;
   }
 
-  // Other assets — cache-first
+  // Other assets — cache-first, but only store successful responses
   e.respondWith(
     caches.match(e.request).then(function(cached){
       return cached || fetch(e.request).then(function(resp){
-        var clone=resp.clone();
-        caches.open(CACHE_NAME).then(function(cache){cache.put(e.request,clone);});
+        if(resp && resp.ok){
+          var clone=resp.clone();
+          caches.open(CACHE_NAME).then(function(cache){cache.put(e.request,clone);});
+        }
         return resp;
-      });
+      }).catch(function(){ return cached; });
     })
   );
 });
 
-// Allow app to trigger skipWaiting manually
+// Allow the app to trigger skipWaiting manually
 self.addEventListener('message', function(e){
   if(e.data&&e.data.type==='SKIP_WAITING') self.skipWaiting();
 });

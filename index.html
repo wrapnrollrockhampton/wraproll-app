@@ -491,7 +491,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-payroll" onclick="gp('payroll','Payroll')" style="display:none"><span class="snav-icon">🗓</span><span>Payroll</span><span class="snav-badge-dot" id="payroll-badge">0</span></button>
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.7</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border);margin-top:auto">v3.8</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -2866,7 +2866,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='3.7';
+var APP_VER='3.8';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -5034,7 +5034,54 @@ if('serviceWorker' in navigator){
       });
     });
   });
+  // SW broadcasts SW_UPDATED on activate — reload once to pick up the new version
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data&&e.data.type==='SW_UPDATED'&&!swReloaded){ swReloaded=true; forceReloadFresh(); }
+  });
 }
+
+// ── Forced update: scan version.json, silently hard-reload every device when it changes ──
+// This fixes "white screen after update" by clearing caches and re-fetching fresh files,
+// and pushes the new version to ALL devices without any banner/tap.
+var VER_RELOAD_KEY='wr_ver_reload_n';
+function forceReloadFresh(){
+  function doReload(){ try{ window.location.reload(); }catch(e){ window.location.href=window.location.pathname; } }
+  // 1) tell the service worker to take over immediately + check for a newer one
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(reg){ if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); reg.update().catch(function(){}); }
+    }).catch(function(){});
+  }
+  // 2) wipe all caches so stale/broken files can't be served, then reload
+  if(window.caches && caches.keys){
+    caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+    }).then(doReload).catch(doReload);
+  } else { doReload(); }
+}
+function checkVersionForce(){
+  fetch('version.json?_='+Date.now(), {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data||!data.version) return;
+      if(data.version===APP_VER){
+        // already on the latest — clear the loop guard
+        try{ sessionStorage.removeItem(VER_RELOAD_KEY); }catch(e){}
+        return;
+      }
+      // New version detected. Guard against reload loops (e.g. CDN not propagated yet):
+      var n=0; try{ n=parseInt(sessionStorage.getItem(VER_RELOAD_KEY)||'0',10)||0; }catch(e){}
+      if(n>=3) return; // stop after 3 tries this session; next manual open will resolve once CDN catches up
+      try{ sessionStorage.setItem(VER_RELOAD_KEY, String(n+1)); }catch(e){}
+      forceReloadFresh();
+    })
+    .catch(function(){});
+}
+// Check shortly after load (let the app paint first), then periodically + when refocused
+window.addEventListener('load', function(){ setTimeout(checkVersionForce, 3000); });
+setInterval(checkVersionForce, 60000);
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') checkVersionForce(); });
+window.addEventListener('focus', checkVersionForce);
 
 // ════════════ RECEIVE STOCK (invoice scan) ════════════
 var RC_SUP=null, RC_KNOWN=[], RC_NEW=[];
