@@ -533,7 +533,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
         <button class="snav-btn" id="bn-chpw" onclick="openChangePassword()" style="margin-top:auto"><span class="snav-icon">🔑</span><span>Passcode</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v5.9</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v6.0</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -934,9 +934,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
       </div>
       <div class="fld"><label>Item Name</label><input type="text" id="i-name" oninput="clearSKUPreview()"></div>
       <div class="fld"><label>Category</label>
-        <select id="i-cat" onchange="clearSKUPreview()">
-          <option>Dry Goods</option><option>Frozen</option><option>Beverage</option>
-        </select>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <select id="i-cat" onchange="clearSKUPreview()" style="flex:1;min-width:0">
+            <option>Dry Goods</option><option>Frozen</option><option>Beverage</option>
+          </select>
+          <button type="button" onclick="openAddCategoryFromItem()" style="flex-shrink:0;padding:0 14px;border-radius:10px;border:1.5px solid var(--blue);background:var(--blue-bg);color:var(--blue);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ New</button>
+        </div>
       </div>
       <div class="fld-row">
         <div class="fld"><label>Unit</label><input type="text" id="i-unit" placeholder="kg / box / bottle"></div>
@@ -2697,7 +2700,9 @@ function renderIconGrid(){
   }).join('');
   grid.querySelectorAll('[data-ic]').forEach(function(b){b.addEventListener('click',function(){g('cat-icon').value=b.getAttribute('data-ic');renderIconGrid();});});
 }
+var CAT_RETURN_TO='';
 function openAddCategory(){
+  CAT_RETURN_TO='';
   g('m-cat-title').textContent='Add Category';
   g('cat-name').value=''; g('cat-name').disabled=false;
   g('cat-icon').value='📦'; g('cat-old-name').value='';
@@ -2706,7 +2711,13 @@ function openAddCategory(){
   renderIconGrid();
   om('m-cat');
 }
+// Opened from the Add Item form: after saving, return to the form with the new category selected
+function openAddCategoryFromItem(){
+  openAddCategory();
+  CAT_RETURN_TO='item';
+}
 function openEditCategory(name){
+  CAT_RETURN_TO='';
   var c=CATEGORIES.find(function(x){return x.name===name;});
   g('m-cat-title').textContent='Edit Category';
   g('cat-name').value=name; g('cat-name').disabled=false;
@@ -2730,7 +2741,12 @@ function saveCategory(){
   } else {
     api('addCategory',{name:name,icon:icon}).then(function(r){
       hov(); if(!r.ok){ showMsg('cat-msg','err','❌ '+r.msg); return; }
-      cm('m-cat'); loadCategories(function(){ renderCatList(); });
+      var ret=CAT_RETURN_TO; CAT_RETURN_TO='';
+      cm('m-cat');
+      loadCategories(function(){
+        renderCatList();
+        if(ret==='item'){ var sel=g('i-cat'); if(sel){ sel.value=name; } if(typeof clearSKUPreview==='function') clearSKUPreview(); }
+      });
     });
   }
 }
@@ -3240,7 +3256,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='5.9';
+var APP_VER='6.0';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
