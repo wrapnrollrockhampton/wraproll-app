@@ -533,7 +533,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-s
         <button class="snav-btn" id="bn-revenue" onclick="gp('revenue','Revenue')" style="display:none"><span class="snav-icon">💹</span><span>Revenue</span></button>
         <button class="snav-btn" id="bn-admin" onclick="gp('admin','Admin')" style="display:none"><span class="snav-icon">⚙️</span><span>Admin</span></button>
         <button class="snav-btn" id="bn-chpw" onclick="openChangePassword()" style="margin-top:auto"><span class="snav-icon">🔑</span><span>Passcode</span></button>
-        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v6.2</div>
+        <div id="app-version" style="padding:10px 14px;font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;border-top:1px solid var(--border)">v6.3</div>
       </div>
     </div>
     <button id="sidebar-toggle" onclick="toggleSidebar()" title="Toggle menu">‹</button>
@@ -3278,7 +3278,7 @@ if(isIOS && !isStandalone && !localStorage.getItem('wr_install_dismissed')){
 
 // ════ SERVICE WORKER + ACTIVE VERSION CHECK ════
 // APP_VER must match version.json — update all three (sidebar tag, version.json, sw.js) per release
-var APP_VER='6.2';
+var APP_VER='6.3';
 var SW_REG=null;
 var UPDATE_PENDING=false;
 
@@ -3408,6 +3408,7 @@ function fmtAUD(n){
 }
 
 // ── Staff Dashboard ───────────────────
+var STAFF_WEEK_OFFSET=0; // 0=this week, -1=last week, etc.
 function renderStaffDash(){
   var sec=g('staff-dash-section');
   if(!sec) return;
@@ -3458,9 +3459,10 @@ function renderStaffDash(){
     ? calcGross(0,uForCalc,dm.m,'')
     : (coToday?calcHrsStr(ciToday,coToday):elapsed)*rate*dm.m;
 
-  // Week table — use local date to avoid UTC offset shifting days (e.g. UTC+10 midnight)
+  // Week table — use local date + offset for navigation
   var now=new Date(),dow=now.getDay();
-  var mon=new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
+  var mon=new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1)+(STAFF_WEEK_OFFSET*7));
+  var isCurrentWeek=(STAFF_WEEK_OFFSET===0);
   var weekDays=[];
   for(var i=0;i<7;i++){var d=new Date(mon);d.setDate(mon.getDate()+i);weekDays.push(localDateStr(d));}
   var DAY=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -3479,6 +3481,9 @@ function renderStaffDash(){
     return {ds:ds,r:r,hrs:hrs,gross:gross,ml:dmi.label,isToday:isToday,day:DAY[i],ci:ci,co:co,counted:counted};
   });
   var weekSuper=0;
+  var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  var weekLabel=isCurrentWeek?'This week':'Week of '+mon.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  var weekRange=mon.toLocaleDateString('en-AU',{day:'numeric',month:'short'})+' – '+sun.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
 
   sec.innerHTML=
     '<div class="scard" style="margin-bottom:12px">'+
@@ -3521,7 +3526,13 @@ function renderStaffDash(){
         '</div>'+
       '</div>'+
     '</div>'+
-    '<div class="sec-hd"><span class="sec-title" style="font-size:15px;font-weight:700">This week</span><button onclick="openPayrollHistory()" style="padding:5px 11px;border-radius:9px;border:none;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">📅 History</button></div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<button onclick="STAFF_WEEK_OFFSET--;renderStaffDash()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#f9fafb;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">◀</button>'+
+      '<div style="flex:1;text-align:center"><div style="font-size:15px;font-weight:700">'+weekLabel+'</div>'+(isCurrentWeek?'':'<div style="font-size:11px;color:var(--text2)">'+weekRange+'</div>')+'</div>'+
+      (isCurrentWeek?'':'<button onclick="STAFF_WEEK_OFFSET=0;renderStaffDash()" style="padding:4px 10px;border-radius:7px;border:none;background:var(--blue-bg);color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Today</button>')+
+      '<button onclick="if(STAFF_WEEK_OFFSET<0){STAFF_WEEK_OFFSET++;renderStaffDash()}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:'+(isCurrentWeek?'#f3f4f6':'#f9fafb')+';font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:'+(isCurrentWeek?'var(--text3)':'var(--text)')+'">▶</button>'+
+      '<button onclick="openPayrollHistory()" style="padding:5px 11px;border-radius:9px;border:none;background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">📅</button>'+
+    '</div>'+
     '<div class="scard">'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px">'+
         '<div><div style="font-size:11px;color:var(--text2);margin-bottom:2px">Total hours</div><div style="font-size:20px;font-weight:700">'+weekHrs.toFixed(1)+' hrs</div></div>'+
